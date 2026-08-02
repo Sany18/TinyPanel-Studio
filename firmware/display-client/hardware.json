@@ -7,6 +7,8 @@
   "rotation": 3,
   "colorOrder": "rgb",
   "spiFrequency": 40000000,
+  "serverHost": "192.170.60.234",
+  "serverPort": 8765,
   "pins": {
     "cs": 0,
     "dc": 3,

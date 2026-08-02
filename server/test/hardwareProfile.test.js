@@ -21,6 +21,22 @@ test('persists a validated hardware profile and generates firmware macros', () =
     const header = fs.readFileSync(path.join(directory, 'hardware_config.h'), 'utf8');
     assert.match(header, /TP_DISPLAY_ST7789 1/);
     assert.match(header, /TP_TFT_BACKLIGHT 5/);
+    assert.match(header, /TP_SERVER_HOST "192\.170\.60\.234"/);
+    assert.match(header, /TP_SERVER_PORT 8765/);
+  } finally {
+    fs.rmSync(directory, { recursive: true });
+  }
+});
+
+test('validates display server address and port', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tinypanel-hardware-'));
+  try {
+    const service = new HardwareProfileService(directory);
+    const result = service.update({ ...DEFAULT_PROFILE, serverHost: 'studio.local', serverPort: 9000 });
+    assert.equal(result.profile.serverHost, 'studio.local');
+    assert.equal(result.profile.serverPort, 9000);
+    assert.throws(() => service.update({ ...DEFAULT_PROFILE, serverHost: 'bad host', serverPort: 8765 }), /Server host/);
+    assert.throws(() => service.update({ ...DEFAULT_PROFILE, serverPort: 70000 }), /Server port/);
   } finally {
     fs.rmSync(directory, { recursive: true });
   }

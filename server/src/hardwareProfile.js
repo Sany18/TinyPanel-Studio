@@ -29,6 +29,8 @@ const DEFAULT_PROFILE = Object.freeze({
   rotation: 3,
   colorOrder: 'rgb',
   spiFrequency: 40000000,
+  serverHost: '192.170.60.234',
+  serverPort: 8765,
   pins: { cs: 0, dc: 3, reset: 4, mosi: 2, sclk: 1, miso: -1, backlight: -1 },
 });
 
@@ -71,6 +73,14 @@ class HardwareProfileService {
     if (!Number.isInteger(spiFrequency) || spiFrequency < 1000000 || spiFrequency > 80000000) {
       throw new RangeError('SPI frequency must be 1–80 MHz');
     }
+    const serverHost = String(value.serverHost ?? DEFAULT_PROFILE.serverHost).trim();
+    const serverPort = Number(value.serverPort ?? DEFAULT_PROFILE.serverPort);
+    if (!serverHost || serverHost.length > 253 || !/^[a-z0-9.-]+$/i.test(serverHost)) {
+      throw new RangeError('Server host must be a valid IPv4 address or hostname');
+    }
+    if (!Number.isInteger(serverPort) || serverPort < 1 || serverPort > 65535) {
+      throw new RangeError('Server port must be between 1 and 65535');
+    }
     const pins = {};
     for (const name of ['cs', 'dc', 'reset', 'mosi', 'sclk', 'miso', 'backlight']) {
       const pin = Number(value.pins?.[name]);
@@ -84,7 +94,7 @@ class HardwareProfileService {
     return {
       controller: controller.id, display: display.id, bus: value.bus,
       width, height, rotation, colorOrder: value.colorOrder === 'bgr' ? 'bgr' : 'rgb',
-      spiFrequency, pins,
+      spiFrequency, serverHost, serverPort, pins,
     };
   }
 
@@ -131,6 +141,8 @@ class HardwareProfileService {
 #define TP_TFT_ROTATION ${p.rotation}
 #define TP_COLOR_ORDER_${macro(p.colorOrder)} 1
 #define TP_SPI_FREQUENCY ${p.spiFrequency}
+#define TP_SERVER_HOST "${p.serverHost}"
+#define TP_SERVER_PORT ${p.serverPort}
 #define TP_TFT_CS ${p.pins.cs}
 #define TP_TFT_DC ${p.pins.dc}
 #define TP_TFT_RST ${p.pins.reset}

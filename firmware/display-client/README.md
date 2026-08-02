@@ -46,8 +46,8 @@ Arduino ESP32 C3 SUPER MINI:
 
 1. Copy `secrets.h.example` to `secrets.h` in this folder and fill in your WiFi
    SSID/password. `secrets.h` is gitignored.
-2. Set `DISPLAY_SERVER_HOST`/`DISPLAY_SERVER_PORT` at the top of the `.ino`
-   to the LAN address `display_server` is running on.
+2. Set the display server host/IP and port in Device Studio Hardware Setup
+   (or in `hardware.json`) before building the firmware.
 3. Install the libraries above via the Arduino IDE Library Manager.
 4. Select board "ESP32C3 Dev Module", and enable **USB CDC On Boot** (Tools menu,
    or `arduino-cli` fqbn suffix `:CDCOnBoot=cdc`) so `Serial` output shows up

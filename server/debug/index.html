@@ -4,62 +4,68 @@
 <meta charset="utf-8">
 <title>TinyPanel Studio</title>
 <style>
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; border-radius: 0 !important; }
+  * { scrollbar-width: thin; scrollbar-color: #596579 #10141c; }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: #10141c; }
+  *::-webkit-scrollbar-thumb { background: #465064; border: 2px solid #10141c; }
+  *::-webkit-scrollbar-thumb:hover { background: #657188; }
+  *::-webkit-scrollbar-corner { background: #10141c; }
   body {
     margin: 0; background: #0b0d12; color: #d8dee9;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
-  header { padding: 16px 20px; border-bottom: 1px solid #282d38; }
+  header { padding: 8px 12px; border-bottom: 1px solid #282d38; }
   header { display: flex; align-items: center; justify-content: space-between; }
   header a { color: #ff8abf; text-decoration: none; }
-  .mode-switch { display: flex; gap: 4px; padding: 4px; border: 1px solid #303747;
+  .mode-switch { display: flex; gap: 2px; padding: 2px; border: 1px solid #303747;
     border-radius: 6px; background: #10141c; }
-  .mode-button { padding: 6px 12px; color: #9ca8ba; background: transparent; border: 0;
+  .mode-button { padding: 5px 9px; color: #9ca8ba; background: transparent; border: 0;
     border-radius: 4px; cursor: pointer; font: inherit; }
   .mode-button.active { color: #fff; background: #293141; }
   h2, h3 { margin: 0; }
-  main { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 62px); }
-  aside { padding: 16px; border-right: 1px solid #282d38; }
-  aside h3:not(:first-child) { margin-top: 24px; }
-  section { padding: 20px; display: grid; grid-template-columns: minmax(660px, 1fr) minmax(360px, 1fr);
-    gap: 20px; min-width: 0; }
-  .editor-header { width: 100%; height: 36px; flex: 0 0 36px; display: grid; grid-template-columns: 1fr auto 1fr;
+  main { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 46px); }
+  aside { padding: 10px; border-right: 1px solid #282d38; }
+  aside h3:not(:first-child) { margin-top: 14px; }
+  section { padding: 10px; display: grid; grid-template-columns: minmax(600px, 1fr) minmax(340px, 1fr);
+    gap: 10px; min-width: 0; }
+  .editor-header { width: 100%; height: 32px; flex: 0 0 32px; display: grid; grid-template-columns: 1fr auto 1fr;
     align-items: center; }
   .editor-header h3 { grid-column: 2; text-align: center; }
-  .editor-actions { grid-column: 3; justify-self: end; display: flex; align-items: center; gap: 8px; }
+  .editor-actions { grid-column: 3; justify-self: end; display: flex; align-items: center; gap: 4px; }
   .editor-menu { position: relative; }
-  #editor-menu-toggle { width: 38px; height: 38px; padding: 0; color: #d8dee9; background: #151923;
+  #editor-menu-toggle { width: 32px; height: 32px; padding: 0; color: #d8dee9; background: #151923;
     border: 1px solid #465064; border-radius: 6px; cursor: pointer; font-size: 22px; line-height: 1; }
-  .editor-menu-panel { position: absolute; z-index: 20; top: calc(100% + 6px); right: 0; width: 250px;
-    display: grid; gap: 10px; padding: 12px; border: 1px solid #465064; border-radius: 6px;
+  .editor-menu-panel { position: absolute; z-index: 20; top: calc(100% + 2px); right: 0; width: 240px;
+    display: grid; gap: 6px; padding: 8px; border: 1px solid #465064; border-radius: 6px;
     background: #10141c; box-shadow: 0 12px 30px #0009; }
   .editor-menu-panel[hidden] { display: none; }
-  .editor-menu-panel label { display: grid; grid-template-columns: 1fr 110px; gap: 8px;
+  .editor-menu-panel label { display: grid; grid-template-columns: 1fr 110px; gap: 5px;
     align-items: center; color: #9ca8ba; font-size: 12px; }
-  .editor-menu-panel select { width: 100%; padding: 6px; color: #d8dee9; background: #151923;
+  .editor-menu-panel select { width: 100%; padding: 4px; color: #d8dee9; background: #151923;
     border: 1px solid #465064; border-radius: 4px; }
-  #workspace-fullscreen { width: 38px; height: 38px; padding: 0; color: #d8dee9; background: #151923;
+  #workspace-fullscreen { width: 32px; height: 32px; padding: 0; color: #d8dee9; background: #151923;
     border: 1px solid #465064; border-radius: 6px; cursor: pointer; font-size: 22px; line-height: 1; }
   #workspace-fullscreen:hover { border-color: #50a7ff; background: #17273a; }
-  .preview, .editor { display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 0; }
-  .preview > h3 { width: 100%; height: 36px; flex: 0 0 36px; display: flex;
+  .preview, .editor { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+  .preview > h3 { width: 100%; height: 32px; flex: 0 0 32px; display: flex;
     align-items: center; justify-content: center; }
-  #devices { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
-  #apps { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
-  .app-row { display: flex; align-items: stretch; gap: 6px; }
-  .device { width: 100%; padding: 10px; color: inherit; text-align: left;
+  #devices { display: flex; flex-direction: column; gap: 4px; margin-top: 7px; }
+  #apps { display: flex; flex-direction: column; gap: 4px; margin-top: 7px; }
+  .app-row { display: flex; align-items: stretch; gap: 3px; }
+  .device { width: 100%; padding: 7px; color: inherit; text-align: left;
     background: #151923; border: 1px solid #303747; border-radius: 6px; cursor: pointer; }
   .device.selected { border-color: #50a7ff; background: #17273a; }
-  .app { flex: 1; min-width: 0; padding: 10px; color: inherit; text-align: left;
+  .app { flex: 1; min-width: 0; padding: 7px; color: inherit; text-align: left;
     background: #151923; border: 1px solid #303747; border-radius: 6px; cursor: pointer; }
   .app.active { border-color: #62d68b; background: #183023; }
-  .app small { display: block; margin-top: 5px; color: #8b96a8; }
-  .app-edit { flex: 0 0 36px; padding: 0; color: #9fb0c8; background: #151923;
+  .app small { display: block; margin-top: 2px; color: #8b96a8; }
+  .app-edit { flex: 0 0 32px; padding: 0; color: #9fb0c8; background: #151923;
     border: 1px solid #303747; border-radius: 6px; cursor: pointer; }
   .app-edit:hover { color: #fff; border-color: #50a7ff; }
-  #new-app { width: 100%; margin-top: 8px; padding: 8px; color: #d8dee9;
+  #new-app { width: 100%; margin-top: 4px; padding: 6px; color: #d8dee9;
     background: transparent; border: 1px dashed #465064; border-radius: 6px; cursor: pointer; }
-  .device small { display: block; margin-top: 5px; color: #8b96a8; }
+  .device small { display: block; margin-top: 2px; color: #8b96a8; }
   .online { color: #62d68b; } .offline { color: #ef6b73; }
   canvas {
     image-rendering: pixelated;
@@ -91,48 +97,48 @@
   .hardware-setup { min-width: 0; align-self: stretch; }
   .hardware-setup[hidden], .editor[hidden] { display: none; }
   .hardware-form { display: grid; grid-template-columns: repeat(2, minmax(150px, 1fr));
-    gap: 12px 16px; padding: 16px; border: 1px solid #303747; border-radius: 6px; background: #10141c; }
-  .hardware-form label { display: grid; gap: 6px; color: #9ca8ba; font-size: 12px; }
-  .hardware-form input, .hardware-form select { width: 100%; padding: 8px; color: #d8dee9;
+    gap: 7px 9px; padding: 9px; border: 1px solid #303747; border-radius: 6px; background: #10141c; }
+  .hardware-form label { display: grid; gap: 3px; color: #9ca8ba; font-size: 12px; }
+  .hardware-form input, .hardware-form select { width: 100%; padding: 5px; color: #d8dee9;
     background: #151923; border: 1px solid #465064; border-radius: 5px; font: inherit; }
   .hardware-form fieldset { grid-column: 1 / -1; display: grid;
-    grid-template-columns: repeat(4, minmax(90px, 1fr)); gap: 10px; margin: 0; padding: 12px;
+    grid-template-columns: repeat(4, minmax(90px, 1fr)); gap: 6px; margin: 0; padding: 7px;
     border: 1px solid #303747; border-radius: 5px; }
-  .hardware-form legend { color: #d8dee9; padding: 0 6px; }
-  .hardware-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
-  .hardware-actions button { padding: 8px 14px; color: inherit; background: #1b2230;
+  .hardware-form legend { color: #d8dee9; padding: 0 3px; }
+  .hardware-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; }
+  .hardware-actions button { padding: 6px 10px; color: inherit; background: #1b2230;
     border: 1px solid #50a7ff; border-radius: 5px; cursor: pointer; }
   #hardware-status.error { color: #ef6b73; }
-  #editor-status { width: 100%; color: #8b96a8; min-height: 2.5em; white-space: pre-wrap; }
+  #editor-status { width: 100%; color: #8b96a8; min-height: 1.5em; white-space: pre-wrap; }
   #editor-status.error { color: #ef6b73; }
   .problems { width: 100%; border: 1px solid #303747; border-radius: 6px;
     background: #10141c; overflow: hidden; flex: 0 0 auto; }
-  .problems-header { height: 32px; padding: 0 10px; display: flex; align-items: center;
+  .problems-header { height: 28px; padding: 0 7px; display: flex; align-items: center;
     justify-content: space-between; color: #8b96a8; background: #151923; }
   #problems-count { min-width: 20px; padding: 2px 6px; text-align: center;
     border-radius: 10px; background: #293141; color: #b5c0d0; }
   .problems.has-errors { border-color: #8a3f48; }
   .problems.has-errors .problems-header { color: #ff9aa2; background: #27171c; }
   .problems.has-errors #problems-count { color: #fff; background: #a84651; }
-  #problems-output { display: none; max-height: 160px; margin: 0; padding: 10px;
+  #problems-output { display: none; max-height: 140px; margin: 0; padding: 7px;
     overflow: auto; color: #ff9aa2; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
     white-space: pre-wrap; }
   .problems.has-errors #problems-output { display: block; }
-  .transport-panel { margin-top: 14px; padding: 12px;
+  .transport-panel { margin-top: 7px; padding: 7px;
     border: 1px solid #303747; border-radius: 6px; background: #10141c; font-size: 12px; }
   #bandwidth-value { color: #9fb0c8; line-height: 1.5; }
-  .debug-dock { grid-column: 1 / -1; min-width: 0; height: 250px; border: 1px solid #303747;
+  .debug-dock { grid-column: 1 / -1; min-width: 0; height: 210px; border: 1px solid #303747;
     border-radius: 6px; background: #10141c; overflow: hidden; }
-  .dock-tabs { display: flex; height: 38px; padding: 4px; gap: 4px; border-bottom: 1px solid #303747;
+  .dock-tabs { display: flex; height: 32px; padding: 2px; gap: 2px; border-bottom: 1px solid #303747;
     background: #151923; }
-  .dock-tab { padding: 5px 12px; color: #9ca8ba; background: transparent; border: 0;
+  .dock-tab { padding: 3px 9px; color: #9ca8ba; background: transparent; border: 0;
     border-radius: 4px; cursor: pointer; font: inherit; }
   .dock-tab.active { color: #fff; background: #293141; }
-  .dock-pane { height: calc(100% - 38px); padding: 12px; overflow: hidden; }
+  .dock-pane { height: calc(100% - 32px); padding: 7px; overflow: hidden; }
   #debug-pane { overflow: auto; }
   .dock-pane[hidden] { display: none; }
-  .dock-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .dock-pane button { padding: 7px 10px; color: inherit;
+  .dock-toolbar { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .dock-pane button { padding: 5px 8px; color: inherit;
     background: #1b2230; border: 1px solid #465064; border-radius: 5px; cursor: pointer; }
   .log { margin: 0; min-height: 140px; height: calc(100% - 38px); overflow: auto; white-space: pre-wrap;
     color: #9fb0c8; font-size: 12px; }
@@ -140,9 +146,9 @@
   body.workspace-fullscreen { overflow: hidden; }
   body.workspace-fullscreen header, body.workspace-fullscreen aside { display: none; }
   body.workspace-fullscreen main { display: block; min-height: 100vh; }
-  body.workspace-fullscreen section { width: 100vw; height: 100vh; padding: 12px 16px 16px;
+  body.workspace-fullscreen section { width: 100vw; height: 100vh; padding: 6px 8px 8px;
     grid-template-columns: minmax(360px, 2fr) minmax(560px, 5fr);
-    grid-template-rows: minmax(0, 1fr) 250px; gap: 18px; }
+    grid-template-rows: minmax(0, 1fr) 210px; gap: 8px; }
   body.workspace-fullscreen .preview, body.workspace-fullscreen .editor { min-height: 0; }
   body.workspace-fullscreen .display-ruler { grid-template-rows: minmax(0, auto) 30px; }
   body.workspace-fullscreen .preview canvas { width: 100%; height: auto; aspect-ratio: 5 / 4; }
@@ -229,6 +235,8 @@
           <fieldset><legend>Wi-Fi</legend>
             <label>SSID<input id="hardware-wifi-ssid" type="text" maxlength="32" autocomplete="off"></label>
             <label>Password<input id="hardware-wifi-password" type="password" maxlength="63" autocomplete="new-password" placeholder="Leave blank to keep current"></label>
+            <label>Server host / IP<input id="hardware-server-host" type="text" maxlength="253" placeholder="192.168.1.10"></label>
+            <label>Server port<input id="hardware-server-port" type="number" min="1" max="65535"></label>
             <div id="hardware-wifi-status"></div>
           </fieldset>
           <div class="hardware-actions"><button type="submit">Save hardware profile</button><span id="hardware-status"></span></div>

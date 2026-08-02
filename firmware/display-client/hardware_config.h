@@ -8,6 +8,8 @@
 #define TP_TFT_ROTATION 3
 #define TP_COLOR_ORDER_RGB 1
 #define TP_SPI_FREQUENCY 40000000
+#define TP_SERVER_HOST "192.170.60.234"
+#define TP_SERVER_PORT 8765
 #define TP_TFT_CS 0
 #define TP_TFT_DC 3
 #define TP_TFT_RST 4

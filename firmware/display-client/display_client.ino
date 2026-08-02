@@ -53,10 +53,10 @@ Adafruit_ILI9341 TFTscreen = Adafruit_ILI9341(TP_DISPLAY_ARGS);
 Adafruit_ST7735 TFTscreen = Adafruit_ST7735(TP_DISPLAY_ARGS);
 #endif
 
-// display_server's LAN address - plain, not secret (same style as
-// This is a LAN address, not a secret; Wi-Fi credentials live in secrets.h.
-const char* DISPLAY_SERVER_HOST = "192.170.60.234";
-const int   DISPLAY_SERVER_PORT = 8765;
+// Generated from Hardware Setup. This address is not secret; Wi-Fi
+// credentials remain in the gitignored secrets.h file.
+const char* DISPLAY_SERVER_HOST = TP_SERVER_HOST;
+const uint16_t DISPLAY_SERVER_PORT = TP_SERVER_PORT;
 const unsigned long SERVER_RECONNECT_INTERVAL_MS = 2000;
 
 WiFiClient client;

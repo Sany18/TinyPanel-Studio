@@ -52,6 +52,8 @@ const hardwareSpiFrequency = document.getElementById('hardware-spi-frequency');
 const hardwareWifiSsid = document.getElementById('hardware-wifi-ssid');
 const hardwareWifiPassword = document.getElementById('hardware-wifi-password');
 const hardwareWifiStatus = document.getElementById('hardware-wifi-status');
+const hardwareServerHost = document.getElementById('hardware-server-host');
+const hardwareServerPort = document.getElementById('hardware-server-port');
 let frameCount = 0;
 let selectedDeviceId = null;
 let eventSource = null;
@@ -595,6 +597,8 @@ function setHardwareForm(profile, wifi = null) {
   hardwareRotation.value = profile.rotation;
   hardwareColorOrder.value = profile.colorOrder;
   hardwareSpiFrequency.value = profile.spiFrequency;
+  hardwareServerHost.value = profile.serverHost;
+  hardwareServerPort.value = profile.serverPort;
   for (const input of hardwareForm.querySelectorAll('[data-pin]')) input.value = profile.pins[input.dataset.pin];
   if (wifi) {
     hardwareWifiSsid.value = wifi.ssid || '';
@@ -615,6 +619,8 @@ function readHardwareForm() {
     rotation: Number(hardwareRotation.value),
     colorOrder: hardwareColorOrder.value,
     spiFrequency: Number(hardwareSpiFrequency.value),
+    serverHost: hardwareServerHost.value,
+    serverPort: Number(hardwareServerPort.value),
     pins,
     wifi: { ssid: hardwareWifiSsid.value, password: hardwareWifiPassword.value },
   };
