@@ -21,27 +21,37 @@
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
+#include <Adafruit_ST7789.h>
+#include <Adafruit_ILI9341.h>
 #include <SPI.h>
 #include <WiFi.h>
+#include <TJpg_Decoder.h>
 
 #include "secrets.h"
+#include "hardware_config.h"
 
 #ifndef DISPLAY_FIRMWARE_VERSION
 #define DISPLAY_FIRMWARE_VERSION "dev"
 #endif
-
-#define TFT_CS         0
-#define TFT_RST        4
-#define TFT_DC         3
-#define TFT_MOSI_SDA   2
-#define TFT_SCLK_SCL   1
 
 #define TILE_SIZE   16
 #define TILES_X     10 // 160 / 16
 #define TILES_Y     8  // 128 / 16
 #define TILE_COUNT  80 // TILES_X * TILES_Y
 
-Adafruit_ST7735 TFTscreen = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+#if defined(TP_BUS_SOFTWARE_SPI)
+  #define TP_DISPLAY_ARGS TP_TFT_CS, TP_TFT_DC, TP_TFT_MOSI, TP_TFT_SCLK, TP_TFT_RST
+#else
+  #define TP_DISPLAY_ARGS TP_TFT_CS, TP_TFT_DC, TP_TFT_RST
+#endif
+
+#if defined(TP_DISPLAY_ST7789)
+Adafruit_ST7789 TFTscreen = Adafruit_ST7789(TP_DISPLAY_ARGS);
+#elif defined(TP_DISPLAY_ILI9341)
+Adafruit_ILI9341 TFTscreen = Adafruit_ILI9341(TP_DISPLAY_ARGS);
+#else
+Adafruit_ST7735 TFTscreen = Adafruit_ST7735(TP_DISPLAY_ARGS);
+#endif
 
 // display_server's LAN address - plain, not secret (same style as
 // This is a LAN address, not a secret; Wi-Fi credentials live in secrets.h.
@@ -60,8 +70,10 @@ enum Opcode : uint8_t {
   OP_FILL_CIRCLE   = 0x03,
   OP_FILL_TRIANGLE = 0x04,
   OP_DRAW_LINE     = 0x05,
+  OP_SET_ROTATION  = 0x06,
   OP_BLIT_TILE     = 0xE0,
   OP_BLIT_RECT     = 0xE1,
+  OP_JPEG_FRAME    = 0xE2,
   OP_FRAME_END     = 0xF0,
 };
 const uint8_t ACK_BYTE = 0x06;
@@ -71,10 +83,12 @@ const uint8_t ACK_BYTE = 0x06;
 // to count up to 514 without wrapping.
 // BLIT_RECT is capped at one full-width 160x16 strip:
 // opcode + x/y/w/h + 160*16 RGB565 pixels = 5125 bytes.
-static uint8_t rxBuf[5125];
+static const uint16_t MAX_JPEG_BYTES = 32 * 1024;
+static uint8_t rxBuf[MAX_JPEG_BYTES + 3];
 static uint16_t rxLen = 0;
 static uint16_t expectedLen = 0; // 0 = "haven't read the opcode byte yet"
 static bool readingRectHeader = false;
+static bool readingJpegHeader = false;
 
 // Per-frame diagnostics. total includes TCP gaps and drawing; draw includes
 // only dispatch()/SPI work. Printed after ACK so Serial cannot delay it.
@@ -94,6 +108,7 @@ void connectWiFi();
 void connectServer();
 void pollServer();
 void dispatch(const uint8_t* buf, uint16_t len);
+bool drawJpegBlock(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* pixels);
 
 void setup() {
   Serial.begin(115200);
@@ -101,11 +116,27 @@ void setup() {
 
   // GPIO1/GPIO2 aren't this board's default hardware-SPI pins, so route the
   // SPI peripheral to them explicitly via the GPIO matrix before initR().
-  SPI.begin(TFT_SCLK_SCL, -1, TFT_MOSI_SDA, TFT_CS);
+#if defined(TP_BUS_HARDWARE_SPI)
+  SPI.begin(TP_TFT_SCLK, TP_TFT_MISO, TP_TFT_MOSI, TP_TFT_CS);
+#endif
 
-  TFTscreen.initR(INITR_BLACKTAB); // this panel is RGB-ordered (GREENTAB's BGR swap turns cyan into yellow)
-  TFTscreen.setRotation(3); // panel is physically mounted flipped 180 from setRotation(1)'s assumption
+#if defined(TP_DISPLAY_ST7789)
+  TFTscreen.init(TP_TFT_WIDTH, TP_TFT_HEIGHT);
+#elif defined(TP_DISPLAY_ILI9341)
+  TFTscreen.begin(TP_SPI_FREQUENCY);
+#else
+  TFTscreen.initR(INITR_BLACKTAB);
+#endif
+  TFTscreen.setSPISpeed(TP_SPI_FREQUENCY);
+  TFTscreen.setRotation(TP_TFT_ROTATION);
   TFTscreen.fillScreen(ST7735_BLACK);
+#if TP_TFT_BACKLIGHT >= 0
+  pinMode(TP_TFT_BACKLIGHT, OUTPUT);
+  digitalWrite(TP_TFT_BACKLIGHT, HIGH);
+#endif
+  TJpgDec.setJpgScale(1);
+  TJpgDec.setSwapBytes(false);
+  TJpgDec.setCallback(drawJpegBlock);
   statsStartedMs = millis();
 
   connectWiFi();
@@ -157,6 +188,7 @@ void connectServer() {
     rxLen = 0;
     expectedLen = 0;
     readingRectHeader = false;
+    readingJpegHeader = false;
     frameStartedUs = 0;
     frameDrawUs = 0;
     frameBytes = 0;
@@ -177,8 +209,10 @@ uint16_t payloadLenForOpcode(uint8_t op) {
     case OP_FILL_CIRCLE:   return 8;
     case OP_FILL_TRIANGLE: return 14;
     case OP_DRAW_LINE:     return 10;
+    case OP_SET_ROTATION:  return 1;
     case OP_BLIT_TILE:     return 513; // 1 (tileIndex) + 512 (pixel data)
     case OP_BLIT_RECT:     return 4; // initial x/y/w/h header; pixel length is dynamic
+    case OP_JPEG_FRAME:    return 2; // initial u16 byte length; JPEG payload is dynamic
     case OP_FRAME_END:     return 0;
     default:               return 0xFFFF;
   }
@@ -210,6 +244,7 @@ void pollServer() {
       }
       expectedLen = 1 + plen;
       readingRectHeader = rxBuf[0] == OP_BLIT_RECT;
+      readingJpegHeader = rxBuf[0] == OP_JPEG_FRAME;
     }
 
     if (rxLen < expectedLen) {
@@ -237,6 +272,21 @@ void pollServer() {
       }
       expectedLen = (uint16_t)fullLen;
       readingRectHeader = false;
+      continue;
+    }
+
+    if (rxLen == expectedLen && readingJpegHeader) {
+      uint16_t jpegLen = readU16(&rxBuf[1]);
+      uint32_t fullLen = 3U + jpegLen;
+      if (jpegLen < 4 || jpegLen > MAX_JPEG_BYTES || fullLen > sizeof(rxBuf)) {
+        Serial.println("invalid JPEG_FRAME; disconnecting to resync");
+        client.stop();
+        rxLen = expectedLen = 0;
+        readingJpegHeader = false;
+        return;
+      }
+      expectedLen = (uint16_t)fullLen;
+      readingJpegHeader = false;
       continue;
     }
 
@@ -298,6 +348,11 @@ void dispatch(const uint8_t* buf, uint16_t len) {
       TFTscreen.drawLine(x0, y0, x1, y1, color);
       break;
     }
+    case OP_SET_ROTATION: {
+      uint8_t rotation = buf[1];
+      if (rotation == 1 || rotation == 3) TFTscreen.setRotation(rotation);
+      break;
+    }
     case OP_BLIT_TILE: {
       uint8_t tileIndex = buf[1];
       uint8_t tileCol = tileIndex % TILES_X;
@@ -336,6 +391,11 @@ void dispatch(const uint8_t* buf, uint16_t len) {
       TFTscreen.endWrite();
       break;
     }
+    case OP_JPEG_FRAME: {
+      uint16_t jpegLen = readU16(&buf[1]);
+      TJpgDec.drawJpg(0, 0, &buf[3], jpegLen);
+      break;
+    }
     case OP_FRAME_END: {
       uint32_t totalUs = micros() - frameStartedUs;
       uint32_t networkUs = totalUs > frameDrawUs ? totalUs - frameDrawUs : 0;
@@ -363,4 +423,19 @@ void dispatch(const uint8_t* buf, uint16_t len) {
       break;
     }
   }
+}
+
+bool drawJpegBlock(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* pixels) {
+  if (x >= TFTscreen.width() || y >= TFTscreen.height()) return false;
+  uint16_t clippedW = min<uint16_t>(w, TFTscreen.width() - x);
+  uint16_t clippedH = min<uint16_t>(h, TFTscreen.height() - y);
+  if (clippedW == w && clippedH == h) {
+    TFTscreen.startWrite();
+    TFTscreen.setAddrWindow(x, y, w, h);
+    TFTscreen.writePixels(pixels, (uint32_t)w * h);
+    TFTscreen.endWrite();
+  } else {
+    TFTscreen.drawRGBBitmap(x, y, pixels, clippedW, clippedH);
+  }
+  return true;
 }

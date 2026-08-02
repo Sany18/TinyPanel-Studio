@@ -3,7 +3,9 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { frameBus } = require('./server');
+const {
+  frameBus, getCanvasFps, setCanvasFps, getDisplayRotation, setDisplayRotation,
+} = require('./server');
 
 const DEBUG_DIR = path.join(__dirname, '..', 'debug');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript' };
@@ -37,6 +39,14 @@ function json(res, status, value) {
   res.end(JSON.stringify(value));
 }
 
+function orientationToRotation(orientation) {
+  return orientation === 'landscape-reversed' ? 1 : 3;
+}
+
+function rotationToOrientation(rotation) {
+  return Number(rotation) === 1 ? 'landscape-reversed' : 'landscape';
+}
+
 // Opt-in HTTP+SSE viewer that mirrors the exact bytes sent to the real ESP32
 // (see server.js's frameBus) into a browser <canvas>, decoded client-side
 // with the same opcode logic the .ino's dispatch() uses - see debug/client.js.
@@ -52,8 +62,59 @@ function startDebugServer(port, registry, services = {}) {
       return;
     }
 
+    if (requestUrl.pathname === '/api/debug/canvas-fps' && req.method === 'GET') {
+      json(res, 200, { fps: getCanvasFps() });
+      return;
+    }
+
+    if (requestUrl.pathname === '/api/debug/canvas-fps' && req.method === 'PUT') {
+      readJson(req, res, ({ fps }) => ({ fps: setCanvasFps(fps) }));
+      return;
+    }
+
+    if (requestUrl.pathname === '/api/debug/display-settings' && req.method === 'GET') {
+      const config = services.appLibrary?.active?.config;
+      json(res, 200, {
+        fps: config?.fps ?? getCanvasFps(),
+        rotation: config ? orientationToRotation(config.orientation) : getDisplayRotation(),
+      });
+      return;
+    }
+
+    if (requestUrl.pathname === '/api/debug/display-settings' && req.method === 'PUT') {
+      readJson(req, res, ({ fps, rotation }) => {
+        const config = services.appLibrary?.active?.config;
+        if (!config) return {
+          fps: fps === undefined ? getCanvasFps() : setCanvasFps(fps),
+          rotation: rotation === undefined ? getDisplayRotation() : setDisplayRotation(rotation),
+        };
+        const values = {};
+        if (fps !== undefined) values.fps = fps;
+        if (rotation !== undefined) values.orientation = rotationToOrientation(rotation);
+        const updated = Object.keys(values).length
+          ? services.appLibrary.updateConfig(services.appLibrary.activeId, values)
+          : config;
+        setCanvasFps(updated.fps);
+        setDisplayRotation(orientationToRotation(updated.orientation));
+        return { fps: updated.fps, rotation: orientationToRotation(updated.orientation) };
+      });
+      return;
+    }
+
     if (requestUrl.pathname === '/api/firmware' && req.method === 'GET') {
       json(res, 200, services.firmwareService?.describe() || { unavailable: true });
+      return;
+    }
+
+    if (requestUrl.pathname === '/api/hardware' && req.method === 'GET') {
+      json(res, 200, services.hardwareProfile?.describe() || { unavailable: true });
+      return;
+    }
+
+    if (requestUrl.pathname === '/api/hardware' && req.method === 'PUT') {
+      if (!isLoopback(req)) { json(res, 403, { error: 'hardware configuration requires localhost' }); return; }
+      if (!services.hardwareProfile) { json(res, 404, { error: 'hardware configuration unavailable' }); return; }
+      readJson(req, res, (value) => services.hardwareProfile.update(value));
       return;
     }
 
@@ -85,8 +146,9 @@ function startDebugServer(port, registry, services = {}) {
     }
 
     if (requestUrl.pathname === '/api/debug/logs') {
-      const source = requestUrl.searchParams.get('source') === 'serial'
-        ? services.serialMonitor?.log : services.firmwareService?.log;
+      const sourceName = requestUrl.searchParams.get('source');
+      const source = sourceName === 'serial' ? services.serialMonitor?.log
+        : sourceName === 'app' ? services.appLog : services.firmwareService?.log;
       if (!source) { res.writeHead(404); res.end('log unavailable'); return; }
       res.writeHead(200, {
         'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive',
@@ -104,9 +166,28 @@ function startDebugServer(port, registry, services = {}) {
       return;
     }
 
+    if (requestUrl.pathname === '/api/apps/events' && req.method === 'GET') {
+      if (!services.appLibrary) { res.writeHead(404); res.end('app library unavailable'); return; }
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive',
+      });
+      res.write(`data: ${JSON.stringify({ type: 'ready' })}\n\n`);
+      const onChange = (event) => res.write(`data: ${JSON.stringify(event)}\n\n`);
+      services.appLibrary.on('change', onChange);
+      req.on('close', () => services.appLibrary.off('change', onChange));
+      return;
+    }
+
     if (requestUrl.pathname === '/api/apps' && req.method === 'POST') {
       if (!services.appLibrary) { res.writeHead(404); res.end('app library unavailable'); return; }
       readJson(req, res, (value) => services.appLibrary.create(value));
+      return;
+    }
+
+    const metadataMatch = requestUrl.pathname.match(/^\/api\/apps\/([a-z0-9-]+)$/);
+    if (metadataMatch && req.method === 'PUT') {
+      if (!services.appLibrary) { res.writeHead(404); res.end('app library unavailable'); return; }
+      readJson(req, res, (value) => services.appLibrary.updateMetadata(metadataMatch[1], value));
       return;
     }
 
@@ -115,6 +196,8 @@ function startDebugServer(port, registry, services = {}) {
       if (!services.appLibrary) { res.writeHead(404); res.end('app library unavailable'); return; }
       try {
         const result = services.appLibrary.activate(activateMatch[1]);
+        setCanvasFps(result.app.fps);
+        setDisplayRotation(orientationToRotation(result.app.orientation));
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
       } catch (error) {
@@ -169,7 +252,9 @@ function startDebugServer(port, registry, services = {}) {
       return;
     }
 
-    const file = requestUrl.pathname === '/' ? 'index.html' : requestUrl.pathname.slice(1);
+    const file = requestUrl.pathname === '/' ? 'index.html'
+      : requestUrl.pathname === '/preview' ? 'preview.html'
+        : requestUrl.pathname.slice(1);
     const filePath = path.join(DEBUG_DIR, file);
     if (!filePath.startsWith(DEBUG_DIR) || !fs.existsSync(filePath)) {
       res.writeHead(404);

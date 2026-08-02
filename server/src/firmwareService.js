@@ -5,6 +5,19 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+function findSerialPort() {
+  if (process.platform === 'win32') return null;
+  try {
+    const names = fs.readdirSync('/dev');
+    const preferred = names.find((name) => /^cu\.usbmodem/i.test(name))
+      || names.find((name) => /^cu\.(usbserial|wchusbserial|SLAB_USBtoUART)/i.test(name))
+      || names.find((name) => /^tty(USB|ACM)/i.test(name));
+    return preferred ? path.join('/dev', preferred) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 class LogStream extends EventEmitter {
   constructor(limit = 200) {
     super();
@@ -39,15 +52,18 @@ class FirmwareService {
 
   describe() {
     const { version } = JSON.parse(fs.readFileSync(this.versionFile, 'utf8'));
-    return { status: this.status, version, lastBuild: this.lastBuild };
+    return { status: this.status, version, environment: this._environment(), lastBuild: this.lastBuild };
   }
+
+  _environment() { return typeof this.env === 'function' ? this.env() : this.env; }
 
   async build() {
     if (this.child) throw new Error(`firmware service is busy: ${this.status}`);
-    const result = await this._run('building', ['run', '-e', this.env]);
+    const environment = this._environment();
+    const result = await this._run('building', ['run', '-e', environment]);
     const { version } = this.describe();
     const buildId = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-    const source = path.join(this.projectDir, '.pio', 'build', this.env, 'firmware.bin');
+    const source = path.join(this.projectDir, '.pio', 'build', environment, 'firmware.bin');
     fs.mkdirSync(this.buildDir, { recursive: true });
     const filename = `display-client-v${version}-${buildId}.bin`;
     const destination = path.join(this.buildDir, filename);
@@ -59,7 +75,7 @@ class FirmwareService {
 
   async flash() {
     if (this.child) throw new Error(`firmware service is busy: ${this.status}`);
-    return this._run('flashing', ['run', '-e', this.env, '-t', 'upload']);
+    return this._run('flashing', ['run', '-e', this._environment(), '-t', 'upload']);
   }
 
   _run(status, args) {
@@ -102,16 +118,18 @@ class SerialMonitorService {
   }
 
   describe() {
-    return { running: Boolean(this.child), port: this.port, baud: this.baud };
+    return { running: Boolean(this.child), port: this.port || findSerialPort(), baud: this.baud };
   }
 
   start() {
     if (this.child) return this.describe();
+    const port = this.port || findSerialPort();
+    if (!port) throw new Error('ESP32 serial port was not found');
     const reader = path.join(__dirname, '..', 'scripts', 'serial_monitor.py');
-    const args = [reader, this.port, String(this.baud)];
+    const args = [reader, port, String(this.baud)];
     const child = this.spawnImpl(this.python, args, { cwd: this.projectDir, env: process.env });
     this.child = child;
-    this.log.write('system', `serial monitor started: ${this.port} @ ${this.baud}`);
+    this.log.write('system', `serial monitor started: ${port} @ ${this.baud}`);
     child.stdout?.on('data', (data) => this.log.write('serial', data));
     child.stderr?.on('data', (data) => this.log.write('stderr', data));
     child.on('error', (error) => this.log.write('system', error.message));
@@ -128,4 +146,4 @@ class SerialMonitorService {
   }
 }
 
-module.exports = { FirmwareService, SerialMonitorService, LogStream };
+module.exports = { FirmwareService, SerialMonitorService, LogStream, findSerialPort };

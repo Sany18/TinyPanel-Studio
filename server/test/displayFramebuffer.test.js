@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { DisplayFramebuffer } = require('../src/displayFramebuffer');
-const { FrameBuilder } = require('../src/protocol');
+const { FrameBuilder, OP_JPEG_FRAME } = require('../src/protocol');
 
 test('applies vector and tile commands to bounded RGB565 state', () => {
   const sourceTile = Buffer.alloc(512);
@@ -21,6 +21,23 @@ test('applies vector and tile commands to bounded RGB565 state', () => {
   assert.equal(framebuffer.pixels[3 * 160 + 2], 0x1234);
   assert.equal(framebuffer.pixels[0], 0xffff);
   assert.equal(framebuffer.pixels[127 * 160 + 159], 255);
+});
+
+test('wraps a JPEG frame with a bounded length-prefixed command', () => {
+  const jpeg = Buffer.from([0xff, 0xd8, 0x01, 0x02, 0xff, 0xd9]);
+  const encoded = new FrameBuilder().jpegFrame(jpeg).frameEnd().toBuffer();
+  assert.equal(encoded[0], OP_JPEG_FRAME);
+  assert.equal(encoded.readUInt16BE(1), jpeg.length);
+  assert.deepEqual(encoded.subarray(3, 3 + jpeg.length), jpeg);
+  assert.doesNotThrow(() => new DisplayFramebuffer().applyFrame(encoded));
+});
+
+test('encodes display rotation without changing the logical framebuffer', () => {
+  const encoded = new FrameBuilder().setRotation(1).fillScreen(0x1234).frameEnd().toBuffer();
+  const framebuffer = new DisplayFramebuffer();
+  framebuffer.applyFrame(encoded);
+  assert.equal(encoded[0], 0x06);
+  assert.equal(framebuffer.pixels[0], 0x1234);
 });
 
 test('full snapshot reconstructs the same framebuffer without history', () => {

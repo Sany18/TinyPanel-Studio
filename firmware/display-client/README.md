@@ -11,6 +11,10 @@ on the server - no reflash needed.
 The current target uses an ESP32-C3 Super Mini and ST7735S display. The server
 contains a built-in synthwave program for protocol and animation testing.
 
+Firmware 0.4 also accepts length-prefixed JPEG frames. `TJpg_Decoder` renders
+decoded blocks directly to the display, so video does not require a full RGB565
+framebuffer in RAM.
+
 ### Hardware
 
 Display 1.8" TFT ST7735S 128x160 SPI:

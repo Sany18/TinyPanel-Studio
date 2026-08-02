@@ -36,3 +36,23 @@ test('hot reloads a new revision and rolls back pixels after runtime errors', ()
     assert.match(program.lastError.message, /boom/);
   });
 });
+
+test('forwards application console output to the debug log', () => {
+  withStore('function render(ctx, state) { console.log("frame", state.frame); ctx.clear(0); }', (store) => {
+    const entries = [];
+    const program = new LiveCanvasProgram(store, { log: { write: (channel, line) => entries.push({ channel, line }) } });
+    program.nextFrame();
+    assert.deepEqual(entries, [{ channel: 'log', line: 'frame 0' }]);
+  });
+});
+
+test('exposes fetch to Canvas applications for background data loading', () => {
+  withStore('function render(ctx) { fetch("https://example.test/data"); ctx.clear(0); }', (store) => {
+    const calls = [];
+    const program = new LiveCanvasProgram(store, {
+      fetchImpl: (url) => { calls.push(url); return Promise.resolve({ ok: true }); },
+    });
+    program.nextFrame();
+    assert.deepEqual(calls, ['https://example.test/data']);
+  });
+});

@@ -1,0 +1,19 @@
+{
+  "controller": "esp32-c3-super-mini",
+  "display": "st7735",
+  "bus": "hardware-spi",
+  "width": 160,
+  "height": 128,
+  "rotation": 3,
+  "colorOrder": "rgb",
+  "spiFrequency": 40000000,
+  "pins": {
+    "cs": 0,
+    "dc": 3,
+    "reset": 4,
+    "mosi": 2,
+    "sclk": 1,
+    "miso": -1,
+    "backlight": -1
+  }
+}

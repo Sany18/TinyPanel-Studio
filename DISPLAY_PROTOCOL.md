@@ -33,16 +33,18 @@ x values and relies on `Adafruit_GFX` to clip them.
 | `0x03` | `FILL_CIRCLE` | `x0,y0,r:i16×3`, `color:u16` | 9 | `fillCircle(x0,y0,r,color)` |
 | `0x04` | `FILL_TRIANGLE` | `x0,y0,x1,y1,x2,y2:i16×6`, `color:u16` | 15 | `fillTriangle(x0,y0,x1,y1,x2,y2,color)` |
 | `0x05` | `DRAW_LINE` | `x0,y0,x1,y1:i16×4`, `color:u16` | 11 | `drawLine(x0,y0,x1,y1,color)` |
-| `0x06`–`0xDF` | *reserved* | — | — | future opcodes (hlines/vlines/text — needed to later port crypto_tracker) |
+| `0x06` | `SET_ROTATION` | `rotation:u8` (`1` or `3`) | 2 | landscape orientation |
+| `0x07`–`0xDF` | *reserved* | — | — | future opcodes |
 | `0xE0` | `BLIT_TILE` | `tileIndex:u8`, `pixels:u16×256` | 514 | bulk tile blit (see Tile blit below) |
 | `0xE1` | `BLIT_RECT` | `x,y,w,h:u8×4`, `pixels:u16×w×h` | `5 + 2*w*h` | horizontal dirty strip |
-| `0xE2`–`0xEF` | *reserved* | — | — | future opcodes |
+| `0xE2` | `JPEG_FRAME` | `length:u16`, `jpeg:u8×length` | `3 + length` | full 160×128 JPEG frame |
+| `0xE3`–`0xEF` | *reserved* | — | — | future opcodes |
 | `0xF0` | `FRAME_END` | none | 1 | frame boundary (see Flow control) |
 | `0xF1`–`0xFF` | *reserved* | — | — | future connection-level control (handshake, ping) |
 
-Max single command is 5125 bytes (`BLIT_RECT` at 160x16) — sizes the ESP32-side
-receive buffer (`rxBuf[5125]`). Note `rxLen`/`expectedLen` must be wider than
-`uint8_t` (max 255) to count up to 5125 without wrapping.
+Max JPEG payload is 32768 bytes, which sizes the ESP32-side receive buffer.
+Normal 160×128 video frames are considerably smaller. `rxLen`/`expectedLen`
+must be wider than `uint8_t` (max 255).
 
 ## Flow control
 
@@ -105,8 +107,9 @@ TFTscreen.endWrite();
 ```
 
 `BLIT_TILE` remains the smallest fixed raster command and is retained for
-compatibility. The Canvas renderer normally emits `BLIT_RECT` to merge adjacent
-dirty tiles and reduce SPI address-window transactions.
+compatibility. The Canvas renderer prefers vector opcodes for supported solid
+primitives and emits `BLIT_RECT` when browser Canvas features require raster
+fallback.
 
 ## Dirty rectangle blit (BLIT_RECT)
 
@@ -121,3 +124,15 @@ Unlike fixed-size opcodes, the ESP32 parser first accumulates the five-byte
 header, validates dimensions and buffer bounds, then calculates
 `expectedLen = 5 + 2*w*h`. Invalid rectangles terminate the TCP connection so
 the next connection starts from an unambiguous command boundary.
+
+## JPEG frame (JPEG_FRAME)
+
+`JPEG_FRAME` carries one complete baseline JPEG image. Its header is
+`[0xE2][length:u16 big-endian]`, followed by exactly `length` bytes beginning
+with JPEG SOI (`FF D8`) and ending with EOI (`FF D9`). The current limit is
+32 KiB. Firmware decodes MCU blocks with `TJpg_Decoder` and writes those blocks
+directly to the ST7735, avoiding a full uncompressed framebuffer in RAM.
+
+This command is intended for video and photographic content. Canvas scenes
+continue to prefer vector commands, with `BLIT_RECT` as their compatibility
+fallback.

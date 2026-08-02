@@ -14,8 +14,11 @@ binary frames, no framework needed. The `html` program (see below) pulls in
 
 ## Run
 
+Run the following commands from the repository root:
+
 ```bash
-node src/index.js
+npm ci
+npm start
 ```
 
 Listens on port `8765` by default (override with `DISPLAY_SERVER_PORT`).
@@ -24,16 +27,19 @@ this machine's LAN IP - the ESP32 connects out to this server, not the other
 way around. Also starts a browser debug viewer at `http://localhost:8766` by
 default - see "Debug viewer" below.
 
-Runs the `synthwave` program by default. To stream a static HTML/CSS page
-instead:
+Runs the selected Canvas application by default, so switching apps in Device
+Studio immediately changes what connected displays render. Run the legacy
+Synthwave renderer with `npm run start:synthwave`.
+
+To stream a static HTML/CSS page instead:
 
 ```bash
-DISPLAY_SERVER_PROGRAM=html DISPLAY_SERVER_HTML_PATH=pages/clock.html node src/index.js
+DISPLAY_SERVER_PROGRAM=html DISPLAY_SERVER_HTML_PATH=server/pages/clock.html npm start
 ```
 
 `DISPLAY_SERVER_HTML_PATH` defaults to `pages/clock.html` if omitted.
 
-To run the direct RGB565 Canvas-like renderer (the preferred production path):
+The direct RGB565 Canvas-like renderer can also be selected explicitly:
 
 ```bash
 npm run start:canvas
@@ -41,13 +47,35 @@ npm run start:canvas
 
 ## App library and Device Studio
 
-Canvas applications live under `apps/<app-id>/`:
+Canvas applications live in the repository-level `apps/<app-id>/` directory:
 
 ```text
-apps/pixel-runner/
-  manifest.json
+../apps/synthwave/
   main.canvas.js
 ```
+
+Application metadata and display preferences live in a JSDoc-style block at
+the start of `main.canvas.js`; no separate manifest is required:
+
+```js
+/**
+ * @tinypanel
+ * @name Synthwave
+ * @description Animated retro sun and perspective grid
+ * @width 160
+ * @height 128
+ * @orientation landscape
+ * @fps 30
+ */
+```
+
+Supported orientations are `landscape`, `landscape-reversed`, `portrait`, and
+`portrait-reversed`. The editor currently exposes the two landscape rotations
+supported by the display firmware. Legacy `manifest.json` files remain a
+fallback for applications that do not yet contain this block.
+
+See the complete [application JSDoc configuration reference](../docs/APP_JSDOC_CONFIG.md)
+for validation rules, orientation values, and frame-rate behavior.
 
 Open Device Studio at `http://localhost:8766` to select an application, create
 a new one, edit its Canvas source, and see autosaved changes immediately on the
@@ -58,16 +86,22 @@ not committed.
 The built-in editor uses locally bundled CodeMirror 6 with JavaScript syntax
 highlighting, line numbers, code folding, bracket matching, search,
 undo/redo, and Tab indentation. No editor assets are loaded from a CDN.
-`npm start`, `npm run start:canvas`, and `npm run start:html` rebuild the browser
-bundle automatically; use `npm run build:editor` to build it explicitly.
+`npm start`, `npm run start:canvas`, `npm run start:synthwave`,
+`npm run start:html`, and `npm run start:video` rebuild the browser bundle
+automatically; use
+`npm run build:editor` to build it explicitly.
 
 The current Canvas app contract is a global `render(ctx, state)` function.
 `state` exposes `frame`, `time`, `width`, `height`, and `revision`. Invalid
 source is rejected before saving; runtime errors preserve the last valid
 framebuffer.
 
-The Canvas API currently provides `clear`, `fillRect`, `drawLine`,
-`fillCircle`, `fillTriangle`, and compact bitmap `drawText`. Apps with a
+Canvas apps receive a Node Canvas 2D context with browser-compatible paths,
+gradients, transforms, compositing, text, and image APIs. TinyPanel's existing
+`clear`, `drawLine`, `fillCircle`, `fillTriangle`, and compact bitmap
+`drawText` helpers remain available through a compatibility adapter. Frames
+are rasterized in RGBA and converted to RGB565 before dirty-rectangle encoding.
+Apps with a
 server-side data source receive its cached snapshot as `state.data`; network
 requests never run inside `render()` or block the display ACK loop.
 
@@ -88,6 +122,13 @@ Device Studio keeps diagnostics off by default. Enable each feature separately:
 - **Firmware build/flash** builds firmware versioned by
   `firmware/display-client/version.json`, archives the `.bin` under
   `firmware-builds/`, and can flash the connected ESP32 after confirmation.
+
+Periodic server performance logs are also disabled by default. Developers can
+enable the `[perf]` console output for a run with:
+
+```bash
+DISPLAY_SERVER_PERF_LOG=1 npm start
+```
 
 Serial and firmware mutation endpoints are localhost-only. Flash automatically
 stops Serial Monitor first so the two processes cannot compete for the USB

@@ -6,11 +6,17 @@ const { CanvasRenderer } = require('../render/canvas565');
 
 const CALL_RENDER = new vm.Script('__render(ctx, state)', { filename: 'live-app-call.vm.js' });
 
-function compile(source, filename = 'live.canvas.js') {
+const SILENT_CONSOLE = Object.freeze({ log() {}, warn() {}, error() {} });
+
+function compile(source, filename = 'live.canvas.js', consoleImpl = SILENT_CONSOLE, fetchImpl = globalThis.fetch) {
   const context = vm.createContext({
     Math,
     Date,
-    console: Object.freeze({ log() {}, warn() {}, error() {} }),
+    console: consoleImpl,
+    fetch: (...args) => fetchImpl(...args),
+    URL,
+    URLSearchParams,
+    AbortController,
   });
   const script = new vm.Script(
     `'use strict';\n${source}\n`
@@ -49,7 +55,7 @@ class LiveAppStore {
 }
 
 class LiveCanvasProgram {
-  constructor(store, { dataProvider = null } = {}) {
+  constructor(store, { dataProvider = null, log = null, fetchImpl = globalThis.fetch } = {}) {
     this.store = store;
     this.renderer = new CanvasRenderer();
     this.context = null;
@@ -57,12 +63,22 @@ class LiveCanvasProgram {
     this.frame = 0;
     this.lastError = null;
     this.dataProvider = dataProvider;
-    this.rollbackPixels = new Uint16Array(this.renderer.width * this.renderer.height);
+    this.log = log;
+    this.fetchImpl = fetchImpl;
+    const writeLog = (level, values) => this.log?.write(level, values.map((value) => {
+      if (typeof value === 'string') return value;
+      try { return JSON.stringify(value); } catch (_) { return String(value); }
+    }).join(' '));
+    this.console = Object.freeze({
+      log: (...values) => writeLog('log', values),
+      warn: (...values) => writeLog('warn', values),
+      error: (...values) => writeLog('error', values),
+    });
   }
 
   nextFrame() {
     if (this.loadedRevision !== this.store.revision) {
-      this.context = compile(this.store.source, this.store.sourcePath);
+      this.context = compile(this.store.source, this.store.sourcePath, this.console, this.fetchImpl);
       this.loadedRevision = this.store.revision;
       this.lastError = null;
     }
@@ -79,13 +95,13 @@ class LiveCanvasProgram {
     });
     this.context.ctx = this.renderer.canvas;
     this.context.state = state;
-    this.rollbackPixels.set(this.renderer.current.pixels);
+    const rollback = this.renderer.snapshot();
     try {
       CALL_RENDER.runInContext(this.context, { timeout: 16 });
       this.lastError = null;
       this.frame++;
     } catch (error) {
-      this.renderer.current.pixels.set(this.rollbackPixels);
+      this.renderer.restore(rollback);
       this.lastError = { message: error.message, stack: error.stack, at: new Date().toISOString() };
     } finally {
       delete this.context.ctx;

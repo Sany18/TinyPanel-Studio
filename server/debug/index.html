@@ -12,21 +12,51 @@
   header { padding: 16px 20px; border-bottom: 1px solid #282d38; }
   header { display: flex; align-items: center; justify-content: space-between; }
   header a { color: #ff8abf; text-decoration: none; }
+  .mode-switch { display: flex; gap: 4px; padding: 4px; border: 1px solid #303747;
+    border-radius: 6px; background: #10141c; }
+  .mode-button { padding: 6px 12px; color: #9ca8ba; background: transparent; border: 0;
+    border-radius: 4px; cursor: pointer; font: inherit; }
+  .mode-button.active { color: #fff; background: #293141; }
   h2, h3 { margin: 0; }
   main { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 62px); }
   aside { padding: 16px; border-right: 1px solid #282d38; }
   aside h3:not(:first-child) { margin-top: 24px; }
-  section { padding: 20px; display: grid; grid-template-columns: minmax(660px, 1fr) minmax(360px, 1fr); gap: 20px; }
+  section { padding: 20px; display: grid; grid-template-columns: minmax(660px, 1fr) minmax(360px, 1fr);
+    gap: 20px; min-width: 0; }
+  .editor-header { width: 100%; height: 36px; flex: 0 0 36px; display: grid; grid-template-columns: 1fr auto 1fr;
+    align-items: center; }
+  .editor-header h3 { grid-column: 2; text-align: center; }
+  .editor-actions { grid-column: 3; justify-self: end; display: flex; align-items: center; gap: 8px; }
+  .editor-menu { position: relative; }
+  #editor-menu-toggle { width: 38px; height: 38px; padding: 0; color: #d8dee9; background: #151923;
+    border: 1px solid #465064; border-radius: 6px; cursor: pointer; font-size: 22px; line-height: 1; }
+  .editor-menu-panel { position: absolute; z-index: 20; top: calc(100% + 6px); right: 0; width: 250px;
+    display: grid; gap: 10px; padding: 12px; border: 1px solid #465064; border-radius: 6px;
+    background: #10141c; box-shadow: 0 12px 30px #0009; }
+  .editor-menu-panel[hidden] { display: none; }
+  .editor-menu-panel label { display: grid; grid-template-columns: 1fr 110px; gap: 8px;
+    align-items: center; color: #9ca8ba; font-size: 12px; }
+  .editor-menu-panel select { width: 100%; padding: 6px; color: #d8dee9; background: #151923;
+    border: 1px solid #465064; border-radius: 4px; }
+  #workspace-fullscreen { width: 38px; height: 38px; padding: 0; color: #d8dee9; background: #151923;
+    border: 1px solid #465064; border-radius: 6px; cursor: pointer; font-size: 22px; line-height: 1; }
+  #workspace-fullscreen:hover { border-color: #50a7ff; background: #17273a; }
   .preview, .editor { display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 0; }
+  .preview > h3 { width: 100%; height: 36px; flex: 0 0 36px; display: flex;
+    align-items: center; justify-content: center; }
   #devices { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
   #apps { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+  .app-row { display: flex; align-items: stretch; gap: 6px; }
   .device { width: 100%; padding: 10px; color: inherit; text-align: left;
     background: #151923; border: 1px solid #303747; border-radius: 6px; cursor: pointer; }
   .device.selected { border-color: #50a7ff; background: #17273a; }
-  .app { width: 100%; padding: 10px; color: inherit; text-align: left;
+  .app { flex: 1; min-width: 0; padding: 10px; color: inherit; text-align: left;
     background: #151923; border: 1px solid #303747; border-radius: 6px; cursor: pointer; }
   .app.active { border-color: #62d68b; background: #183023; }
   .app small { display: block; margin-top: 5px; color: #8b96a8; }
+  .app-edit { flex: 0 0 36px; padding: 0; color: #9fb0c8; background: #151923;
+    border: 1px solid #303747; border-radius: 6px; cursor: pointer; }
+  .app-edit:hover { color: #fff; border-color: #50a7ff; }
   #new-app { width: 100%; margin-top: 8px; padding: 8px; color: #d8dee9;
     background: transparent; border: 1px dashed #465064; border-radius: 6px; cursor: pointer; }
   .device small { display: block; margin-top: 5px; color: #8b96a8; }
@@ -37,24 +67,105 @@
     border: 1px solid #394152;
     background: #000;
   }
+  .display-ruler { display: grid; grid-template-columns: 36px minmax(0, 640px);
+    grid-template-rows: auto 30px; width: min(100%, 676px); }
+  .display-ruler canvas { grid-column: 2; grid-row: 1; width: 100%; height: auto; aspect-ratio: 5 / 4; }
+  .ruler-x, .ruler-y { position: relative; color: #8b96a8; font-size: 10px; user-select: none; }
+  .ruler-x { grid-column: 2; grid-row: 2; border-top: 1px solid #465064; }
+  .ruler-y { grid-column: 1; grid-row: 1; border-right: 1px solid #465064; }
+  .ruler-x::before { content: ''; position: absolute; inset: 0 0 auto; height: 8px;
+    background: repeating-linear-gradient(to right, #596579 0 1px, transparent 1px 6.25%); }
+  .ruler-y::before { content: ''; position: absolute; inset: 0 0 0 auto; width: 8px;
+    background: repeating-linear-gradient(to bottom, #596579 0 1px, transparent 1px 12.5%); }
+  .ruler-label { position: absolute; line-height: 1; }
+  .ruler-x .ruler-label { top: 12px; transform: translateX(-50%); }
+  .ruler-y .ruler-label { right: 12px; transform: translateY(-50%); }
+  .ruler-x .ruler-label:first-child { transform: none; }
+  .ruler-x .ruler-label:last-child { transform: translateX(-100%); }
+  .ruler-y .ruler-label:first-child { transform: none; }
+  .ruler-y .ruler-label:last-child { transform: translateY(-100%); }
+  .ruler-corner { grid-column: 1; grid-row: 2; color: #6ec8ff; font-size: 10px;
+    padding: 11px 5px 0 0; text-align: right; user-select: none; }
   #status { color: #8b96a8; }
   #source { width: 100%; border: 1px solid #394152; border-radius: 6px; overflow: hidden; }
+  .hardware-setup { min-width: 0; align-self: stretch; }
+  .hardware-setup[hidden], .editor[hidden] { display: none; }
+  .hardware-form { display: grid; grid-template-columns: repeat(2, minmax(150px, 1fr));
+    gap: 12px 16px; padding: 16px; border: 1px solid #303747; border-radius: 6px; background: #10141c; }
+  .hardware-form label { display: grid; gap: 6px; color: #9ca8ba; font-size: 12px; }
+  .hardware-form input, .hardware-form select { width: 100%; padding: 8px; color: #d8dee9;
+    background: #151923; border: 1px solid #465064; border-radius: 5px; font: inherit; }
+  .hardware-form fieldset { grid-column: 1 / -1; display: grid;
+    grid-template-columns: repeat(4, minmax(90px, 1fr)); gap: 10px; margin: 0; padding: 12px;
+    border: 1px solid #303747; border-radius: 5px; }
+  .hardware-form legend { color: #d8dee9; padding: 0 6px; }
+  .hardware-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
+  .hardware-actions button { padding: 8px 14px; color: inherit; background: #1b2230;
+    border: 1px solid #50a7ff; border-radius: 5px; cursor: pointer; }
+  #hardware-status.error { color: #ef6b73; }
   #editor-status { width: 100%; color: #8b96a8; min-height: 2.5em; white-space: pre-wrap; }
   #editor-status.error { color: #ef6b73; }
-  .debug-options { display: flex; flex-direction: column; gap: 9px; margin-top: 14px; font-size: 13px; }
-  .debug-panel { width: 100%; margin-top: 12px; padding: 12px; border: 1px solid #303747;
-    border-radius: 6px; background: #10141c; }
-  .debug-panel[hidden] { display: none; }
-  .debug-panel button { margin: 0 5px 8px 0; padding: 7px 10px; color: inherit;
+  .problems { width: 100%; border: 1px solid #303747; border-radius: 6px;
+    background: #10141c; overflow: hidden; flex: 0 0 auto; }
+  .problems-header { height: 32px; padding: 0 10px; display: flex; align-items: center;
+    justify-content: space-between; color: #8b96a8; background: #151923; }
+  #problems-count { min-width: 20px; padding: 2px 6px; text-align: center;
+    border-radius: 10px; background: #293141; color: #b5c0d0; }
+  .problems.has-errors { border-color: #8a3f48; }
+  .problems.has-errors .problems-header { color: #ff9aa2; background: #27171c; }
+  .problems.has-errors #problems-count { color: #fff; background: #a84651; }
+  #problems-output { display: none; max-height: 160px; margin: 0; padding: 10px;
+    overflow: auto; color: #ff9aa2; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: pre-wrap; }
+  .problems.has-errors #problems-output { display: block; }
+  .transport-panel { margin-top: 14px; padding: 12px;
+    border: 1px solid #303747; border-radius: 6px; background: #10141c; font-size: 12px; }
+  #bandwidth-value { color: #9fb0c8; line-height: 1.5; }
+  .debug-dock { grid-column: 1 / -1; min-width: 0; height: 250px; border: 1px solid #303747;
+    border-radius: 6px; background: #10141c; overflow: hidden; }
+  .dock-tabs { display: flex; height: 38px; padding: 4px; gap: 4px; border-bottom: 1px solid #303747;
+    background: #151923; }
+  .dock-tab { padding: 5px 12px; color: #9ca8ba; background: transparent; border: 0;
+    border-radius: 4px; cursor: pointer; font: inherit; }
+  .dock-tab.active { color: #fff; background: #293141; }
+  .dock-pane { height: calc(100% - 38px); padding: 12px; overflow: hidden; }
+  #debug-pane { overflow: auto; }
+  .dock-pane[hidden] { display: none; }
+  .dock-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .dock-pane button { padding: 7px 10px; color: inherit;
     background: #1b2230; border: 1px solid #465064; border-radius: 5px; cursor: pointer; }
-  .log { margin: 0; max-height: 180px; overflow: auto; white-space: pre-wrap;
-    color: #9fb0c8; font-size: 11px; }
+  .log { margin: 0; min-height: 140px; height: calc(100% - 38px); overflow: auto; white-space: pre-wrap;
+    color: #9fb0c8; font-size: 12px; }
+  .dock-pane > .log:only-child { height: 100%; }
+  body.workspace-fullscreen { overflow: hidden; }
+  body.workspace-fullscreen header, body.workspace-fullscreen aside { display: none; }
+  body.workspace-fullscreen main { display: block; min-height: 100vh; }
+  body.workspace-fullscreen section { width: 100vw; height: 100vh; padding: 12px 16px 16px;
+    grid-template-columns: minmax(360px, 2fr) minmax(560px, 5fr);
+    grid-template-rows: minmax(0, 1fr) 250px; gap: 18px; }
+  body.workspace-fullscreen .preview, body.workspace-fullscreen .editor { min-height: 0; }
+  body.workspace-fullscreen .display-ruler { grid-template-rows: minmax(0, auto) 30px; }
+  body.workspace-fullscreen .preview canvas { width: 100%; height: auto; aspect-ratio: 5 / 4; }
+  body.workspace-fullscreen .editor { align-items: stretch; }
+  body.workspace-fullscreen .editor h3 { text-align: center; }
+  body.workspace-fullscreen #source { flex: 1; min-height: 0; }
+  body.workspace-fullscreen #source .cm-editor { height: 100%; }
+  body.workspace-fullscreen #editor-status { flex: 0 0 auto; min-height: 1.5em; }
   @media (max-width: 1200px) { section { grid-template-columns: 1fr; } }
+  @media (max-width: 900px) {
+    body.workspace-fullscreen { overflow: auto; }
+    body.workspace-fullscreen section { width: 100%; height: auto; min-height: 100vh;
+      grid-template-columns: 1fr; grid-template-rows: auto minmax(560px, 1fr); }
+  }
 </style>
 </head>
 <body>
   <header>
     <h2>TinyPanel Studio</h2>
+    <nav class="mode-switch" aria-label="Studio mode">
+      <button id="app-mode" class="mode-button active" type="button">App Editor</button>
+      <button id="hardware-mode" class="mode-button" type="button">Hardware Setup</button>
+    </nav>
     <a href="https://donatello.to/hoxz" target="_blank" rel="noopener noreferrer">Support the project ♡</a>
   </header>
   <main>
@@ -64,34 +175,90 @@
       <h3>App library</h3>
       <div id="apps">loading applications...</div>
       <button id="new-app" type="button">+ New app</button>
-      <h3>Optional debug</h3>
-      <div class="debug-options">
-        <label><input id="bandwidth-debug" type="checkbox"> Transfer speed</label>
-        <label><input id="serial-debug" type="checkbox"> Serial Monitor</label>
-        <label><input id="firmware-debug" type="checkbox"> Firmware build/flash</label>
-      </div>
-      <div id="bandwidth-panel" class="debug-panel" hidden>RX: <span id="bandwidth-value">—</span></div>
-      <div id="serial-panel" class="debug-panel" hidden>
-        <div id="serial-status">stopped</div>
-        <pre id="serial-log" class="log"></pre>
-      </div>
-      <div id="firmware-panel" class="debug-panel" hidden>
-        <div id="firmware-status">loading…</div>
-        <button id="build-firmware" type="button">Build</button>
-        <button id="flash-firmware" type="button">Flash ESP32</button>
-        <pre id="firmware-log" class="log"></pre>
+      <h3>Transport</h3>
+      <div class="transport-panel">
+        <span id="bandwidth-value">sampling…</span>
       </div>
     </aside>
     <section>
       <div class="preview">
         <h3 id="preview-title">Live transport preview</h3>
-        <canvas id="panel" width="160" height="128"></canvas>
+        <div class="display-ruler">
+          <div id="ruler-y" class="ruler-y" aria-hidden="true"></div>
+          <canvas id="panel" width="160" height="128"></canvas>
+          <div class="ruler-corner" aria-hidden="true">Y/X</div>
+          <div id="ruler-x" class="ruler-x" aria-hidden="true"></div>
+        </div>
         <div id="status">select a device</div>
       </div>
-      <div class="editor">
-        <h3 id="editor-title">Canvas app</h3>
+      <div id="app-workspace" class="editor">
+        <div class="editor-header">
+          <h3 id="editor-title">Canvas app</h3>
+          <div class="editor-actions">
+            <div class="editor-menu">
+              <button id="editor-menu-toggle" type="button" aria-expanded="false" aria-label="Editor settings" title="Editor settings">⚙</button>
+              <div id="editor-menu-panel" class="editor-menu-panel" hidden>
+                <label>Theme<select id="editor-theme"><option value="studio">Studio dark</option><option value="midnight">Midnight</option><option value="light">Light</option></select></label>
+                <label>Colors<select id="editor-color-scheme"><option value="monokai">Monokai</option><option value="neon">Neon</option><option value="ocean">Ocean</option></select></label>
+                <label>Saving<select id="editor-save-mode"><option value="auto">Autosave</option><option value="manual">Ctrl+S only</option></select></label>
+              </div>
+            </div>
+            <button id="workspace-fullscreen" type="button" aria-pressed="false" aria-label="Fullscreen workspace" title="Fullscreen workspace">⛶</button>
+          </div>
+        </div>
         <div id="source" aria-label="Canvas app source"></div>
         <div id="editor-status">loading source…</div>
+      </div>
+      <div id="hardware-workspace" class="hardware-setup" hidden>
+        <div class="editor-header"><h3>Hardware Setup</h3></div>
+        <form id="hardware-form" class="hardware-form">
+          <label>Controller<select id="hardware-controller"></select></label>
+          <label>Display driver<select id="hardware-display"></select></label>
+          <label>Bus<select id="hardware-bus"></select></label>
+          <label>Color order<select id="hardware-color-order"><option value="rgb">RGB</option><option value="bgr">BGR</option></select></label>
+          <label>Width<input id="hardware-width" type="number" min="16" max="320"></label>
+          <label>Height<input id="hardware-height" type="number" min="16" max="320"></label>
+          <label>Initial rotation<select id="hardware-rotation"><option value="0">0°</option><option value="1">90°</option><option value="2">180°</option><option value="3">270°</option></select></label>
+          <label>SPI frequency<input id="hardware-spi-frequency" type="number" min="1000000" max="80000000" step="1000000"></label>
+          <fieldset><legend>Pins (-1 = unused)</legend>
+            <label>CS<input data-pin="cs" type="number"></label><label>DC<input data-pin="dc" type="number"></label>
+            <label>RESET<input data-pin="reset" type="number"></label><label>MOSI<input data-pin="mosi" type="number"></label>
+            <label>SCLK<input data-pin="sclk" type="number"></label><label>MISO<input data-pin="miso" type="number"></label>
+            <label>Backlight<input data-pin="backlight" type="number"></label>
+          </fieldset>
+          <fieldset><legend>Wi-Fi</legend>
+            <label>SSID<input id="hardware-wifi-ssid" type="text" maxlength="32" autocomplete="off"></label>
+            <label>Password<input id="hardware-wifi-password" type="password" maxlength="63" autocomplete="new-password" placeholder="Leave blank to keep current"></label>
+            <div id="hardware-wifi-status"></div>
+          </fieldset>
+          <div class="hardware-actions"><button type="submit">Save hardware profile</button><span id="hardware-status"></span></div>
+        </form>
+      </div>
+      <div class="debug-dock">
+        <div class="dock-tabs" role="tablist">
+          <button class="dock-tab active" data-pane="debug-pane" type="button">Debug <span id="problems-count">0</span></button>
+          <button class="dock-tab" data-pane="app-log-pane" type="button">App logs</button>
+          <button class="dock-tab" data-pane="serial-pane" type="button">Serial monitor</button>
+          <button class="dock-tab" data-pane="firmware-pane" type="button">Firmware</button>
+        </div>
+        <div id="debug-pane" class="dock-pane">
+          <div id="problems" class="problems" aria-live="polite">
+            <div class="problems-header"><span>Problems</span></div>
+            <pre id="problems-output"></pre>
+          </div>
+        </div>
+        <div id="app-log-pane" class="dock-pane" hidden><pre id="app-log" class="log"></pre></div>
+        <div id="serial-pane" class="dock-pane" hidden>
+          <div class="dock-toolbar"><span id="serial-status">stopped</span><button id="serial-toggle" type="button">Start monitor</button></div>
+          <pre id="serial-log" class="log"></pre>
+        </div>
+        <div id="firmware-pane" class="dock-pane" hidden>
+          <div class="dock-toolbar"><span id="firmware-status">loading…</span>
+            <button id="build-firmware" type="button">Build</button>
+            <button id="flash-firmware" type="button">Flash ESP32</button>
+          </div>
+          <pre id="firmware-log" class="log"></pre>
+        </div>
       </div>
     </section>
   </main>

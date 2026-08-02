@@ -8,8 +8,10 @@ const OP_FILL_RECT = 0x02;
 const OP_FILL_CIRCLE = 0x03;
 const OP_FILL_TRIANGLE = 0x04;
 const OP_DRAW_LINE = 0x05;
+const OP_SET_ROTATION = 0x06;
 const OP_BLIT_TILE = 0xe0;
 const OP_BLIT_RECT = 0xe1;
+const OP_JPEG_FRAME = 0xe2;
 const OP_FRAME_END = 0xf0;
 
 const ACK_BYTE = 0x06;
@@ -20,6 +22,7 @@ const TILES_Y = 8; // 128 / 16
 const TILE_COUNT = TILES_X * TILES_Y; // 80
 const TILE_PIXEL_BYTES = TILE_SIZE * TILE_SIZE * 2; // 512
 const MAX_RECT_PIXEL_BYTES = 160 * TILE_SIZE * 2; // one full-width 16px strip
+const MAX_JPEG_BYTES = 32 * 1024;
 
 class FrameBuilder {
   constructor() {
@@ -83,6 +86,13 @@ class FrameBuilder {
     return this;
   }
 
+  setRotation(rotation, prepend = false) {
+    if (rotation !== 1 && rotation !== 3) throw new RangeError('rotation must be 1 or 3');
+    const buf = Buffer.from([OP_SET_ROTATION, rotation]);
+    if (prepend) this._chunks.unshift(buf); else this._chunks.push(buf);
+    return this;
+  }
+
   // pixelDataBE: a pre-built TILE_PIXEL_BYTES-long Buffer of RGB565 pixels,
   // row-major within the tile, big-endian - the caller (htmlProgram.js)
   // already has to build this during RGB565 conversion, so this just wraps
@@ -123,6 +133,20 @@ class FrameBuilder {
     return this;
   }
 
+  jpegFrame(jpegData) {
+    if (!Buffer.isBuffer(jpegData)) throw new TypeError('jpegFrame: jpegData must be a Buffer');
+    if (jpegData.length < 4 || jpegData.length > MAX_JPEG_BYTES
+        || jpegData[0] !== 0xff || jpegData[1] !== 0xd8
+        || jpegData[jpegData.length - 2] !== 0xff || jpegData[jpegData.length - 1] !== 0xd9) {
+      throw new RangeError(`jpegFrame: invalid JPEG or size ${jpegData.length} exceeds ${MAX_JPEG_BYTES}`);
+    }
+    const header = Buffer.allocUnsafe(3);
+    header.writeUInt8(OP_JPEG_FRAME, 0);
+    header.writeUInt16BE(jpegData.length, 1);
+    this._chunks.push(header, jpegData);
+    return this;
+  }
+
   frameEnd() {
     this._chunks.push(Buffer.from([OP_FRAME_END]));
     return this;
@@ -139,8 +163,10 @@ module.exports = {
   OP_FILL_CIRCLE,
   OP_FILL_TRIANGLE,
   OP_DRAW_LINE,
+  OP_SET_ROTATION,
   OP_BLIT_TILE,
   OP_BLIT_RECT,
+  OP_JPEG_FRAME,
   OP_FRAME_END,
   ACK_BYTE,
   TILE_SIZE,
@@ -149,5 +175,6 @@ module.exports = {
   TILE_COUNT,
   TILE_PIXEL_BYTES,
   MAX_RECT_PIXEL_BYTES,
+  MAX_JPEG_BYTES,
   FrameBuilder,
 };

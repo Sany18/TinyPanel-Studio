@@ -119,6 +119,8 @@ class DisplayFramebuffer {
         this.drawLine(readI16(buf, offset + 1), readI16(buf, offset + 3),
           readI16(buf, offset + 5), readI16(buf, offset + 7), readU16(buf, offset + 9));
         offset += 11;
+      } else if (op === 0x06) {
+        offset += 2;
       } else if (op === 0xe0) {
         this.blitTile(buf[offset + 1], buf, offset + 2);
         offset += 514;
@@ -129,6 +131,12 @@ class DisplayFramebuffer {
         const height = buf[offset + 4];
         this.blitRect(x, y, width, height, buf, offset + 5);
         offset += 5 + width * height * 2;
+      } else if (op === 0xe2) {
+        const length = readU16(buf, offset + 1);
+        // JPEG is decoded by the physical client and browser preview. The
+        // registry keeps its most recent raster snapshot until a decoder is
+        // available here as well.
+        offset += 3 + length;
       } else if (op === 0xf0) {
         offset++;
       } else {

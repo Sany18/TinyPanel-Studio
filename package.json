@@ -12,17 +12,20 @@
     "url": "https://github.com/Sany18/TinyPanel-Studio/issues"
   },
   "homepage": "https://github.com/Sany18/TinyPanel-Studio#readme",
-  "main": "src/index.js",
+  "main": "server/src/index.js",
   "type": "commonjs",
   "scripts": {
-    "build:editor": "esbuild debug/editor.entry.js --bundle --format=iife --outfile=debug/editor.bundle.js",
+    "build:editor": "esbuild server/debug/editor.entry.js --bundle --format=iife --outfile=server/debug/editor.bundle.js",
     "prestart": "npm run build:editor",
-    "start": "node src/index.js",
+    "start": "node server/src/index.js",
     "prestart:canvas": "npm run build:editor",
-    "start:canvas": "DISPLAY_SERVER_PROGRAM=canvas node src/index.js",
+    "start:canvas": "DISPLAY_SERVER_PROGRAM=canvas node server/src/index.js",
+    "prestart:synthwave": "npm run build:editor",
+    "start:synthwave": "DISPLAY_SERVER_PROGRAM=synthwave node server/src/index.js",
     "prestart:html": "npm run build:editor",
-    "start:html": "DISPLAY_SERVER_PROGRAM=html node src/index.js",
-    "test": "node --test"
+    "start:html": "DISPLAY_SERVER_PROGRAM=html node server/src/index.js",
+    "start:video": "DISPLAY_SERVER_PROGRAM=video node server/src/index.js",
+    "test": "node --test server/test/*.test.js"
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.5",
@@ -32,5 +35,8 @@
   },
   "devDependencies": {
     "esbuild": "^0.28.1"
+  },
+  "optionalDependencies": {
+    "canvas": "^3.2.3"
   }
 }
