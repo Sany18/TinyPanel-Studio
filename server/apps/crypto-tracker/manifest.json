@@ -1,0 +1,18 @@
+{
+  "id": "crypto-tracker",
+  "name": "Crypto Tracker",
+  "description": "Live Binance Futures price and candlestick chart",
+  "dataSource": "crypto-tracker",
+  "settings": {
+    "symbol": "BTCUSDT",
+    "interval": "1h",
+    "candleCount": 20,
+    "pollMs": 5000
+  },
+  "settingsSchema": {
+    "symbol": { "type": "string", "label": "Symbol" },
+    "interval": { "type": "select", "label": "Interval", "options": ["1m", "5m", "15m", "1h", "4h", "1d"] },
+    "candleCount": { "type": "number", "label": "Candles", "min": 5, "max": 40 },
+    "pollMs": { "type": "number", "label": "Refresh, ms", "min": 1000, "max": 60000 }
+  }
+}

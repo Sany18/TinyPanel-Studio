@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    width: 160px; height: 128px;
+    background: #000814;
+    overflow: hidden;
+  }
+  #clock {
+    width: 160px; height: 128px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: monospace;
+    font-size: 32px;
+    font-weight: bold;
+    color: #40e0ff;
+    letter-spacing: 2px;
+  }
+  .blink { animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+  <div id="clock">--<span class="blink">:</span>--<span class="blink">:</span>--</div>
+  <script>
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function tick() {
+      const d = new Date();
+      const el = document.getElementById('clock');
+      el.innerHTML = pad(d.getHours()) + '<span class="blink">:</span>'
+        + pad(d.getMinutes()) + '<span class="blink">:</span>' + pad(d.getSeconds());
+    }
+    tick();
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>

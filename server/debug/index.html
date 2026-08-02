@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>TinyPanel Studio</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #0b0d12; color: #d8dee9;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  header { padding: 16px 20px; border-bottom: 1px solid #282d38; }
+  header { display: flex; align-items: center; justify-content: space-between; }
+  header a { color: #ff8abf; text-decoration: none; }
+  h2, h3 { margin: 0; }
+  main { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 62px); }
+  aside { padding: 16px; border-right: 1px solid #282d38; }
+  aside h3:not(:first-child) { margin-top: 24px; }
+  section { padding: 20px; display: grid; grid-template-columns: minmax(660px, 1fr) minmax(360px, 1fr); gap: 20px; }
+  .preview, .editor { display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 0; }
+  #devices { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+  #apps { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+  .device { width: 100%; padding: 10px; color: inherit; text-align: left;
+    background: #151923; border: 1px solid #303747; border-radius: 6px; cursor: pointer; }
+  .device.selected { border-color: #50a7ff; background: #17273a; }
+  .app { width: 100%; padding: 10px; color: inherit; text-align: left;
+    background: #151923; border: 1px solid #303747; border-radius: 6px; cursor: pointer; }
+  .app.active { border-color: #62d68b; background: #183023; }
+  .app small { display: block; margin-top: 5px; color: #8b96a8; }
+  #new-app { width: 100%; margin-top: 8px; padding: 8px; color: #d8dee9;
+    background: transparent; border: 1px dashed #465064; border-radius: 6px; cursor: pointer; }
+  .device small { display: block; margin-top: 5px; color: #8b96a8; }
+  .online { color: #62d68b; } .offline { color: #ef6b73; }
+  canvas {
+    image-rendering: pixelated;
+    width: 640px; height: 512px;
+    border: 1px solid #394152;
+    background: #000;
+  }
+  #status { color: #8b96a8; }
+  #source { width: 100%; border: 1px solid #394152; border-radius: 6px; overflow: hidden; }
+  #editor-status { width: 100%; color: #8b96a8; min-height: 2.5em; white-space: pre-wrap; }
+  #editor-status.error { color: #ef6b73; }
+  .debug-options { display: flex; flex-direction: column; gap: 9px; margin-top: 14px; font-size: 13px; }
+  .debug-panel { width: 100%; margin-top: 12px; padding: 12px; border: 1px solid #303747;
+    border-radius: 6px; background: #10141c; }
+  .debug-panel[hidden] { display: none; }
+  .debug-panel button { margin: 0 5px 8px 0; padding: 7px 10px; color: inherit;
+    background: #1b2230; border: 1px solid #465064; border-radius: 5px; cursor: pointer; }
+  .log { margin: 0; max-height: 180px; overflow: auto; white-space: pre-wrap;
+    color: #9fb0c8; font-size: 11px; }
+  @media (max-width: 1200px) { section { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <header>
+    <h2>TinyPanel Studio</h2>
+    <a href="https://donatello.to/hoxz" target="_blank" rel="noopener noreferrer">Support the project ♡</a>
+  </header>
+  <main>
+    <aside>
+      <h3>Devices</h3>
+      <div id="devices">waiting for clients...</div>
+      <h3>App library</h3>
+      <div id="apps">loading applications...</div>
+      <button id="new-app" type="button">+ New app</button>
+      <h3>Optional debug</h3>
+      <div class="debug-options">
+        <label><input id="bandwidth-debug" type="checkbox"> Transfer speed</label>
+        <label><input id="serial-debug" type="checkbox"> Serial Monitor</label>
+        <label><input id="firmware-debug" type="checkbox"> Firmware build/flash</label>
+      </div>
+      <div id="bandwidth-panel" class="debug-panel" hidden>RX: <span id="bandwidth-value">—</span></div>
+      <div id="serial-panel" class="debug-panel" hidden>
+        <div id="serial-status">stopped</div>
+        <pre id="serial-log" class="log"></pre>
+      </div>
+      <div id="firmware-panel" class="debug-panel" hidden>
+        <div id="firmware-status">loading…</div>
+        <button id="build-firmware" type="button">Build</button>
+        <button id="flash-firmware" type="button">Flash ESP32</button>
+        <pre id="firmware-log" class="log"></pre>
+      </div>
+    </aside>
+    <section>
+      <div class="preview">
+        <h3 id="preview-title">Live transport preview</h3>
+        <canvas id="panel" width="160" height="128"></canvas>
+        <div id="status">select a device</div>
+      </div>
+      <div class="editor">
+        <h3 id="editor-title">Canvas app</h3>
+        <div id="source" aria-label="Canvas app source"></div>
+        <div id="editor-status">loading source…</div>
+      </div>
+    </section>
+  </main>
+  <script src="editor.bundle.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>

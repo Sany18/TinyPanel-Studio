@@ -1,0 +1,9 @@
+.DS_Store
+node_modules/
+server/debug/editor.bundle.js
+server/apps/.active-app
+firmware/display-client/secrets.h
+firmware/display-client/.pio/
+firmware/display-client/firmware-builds/
+__pycache__/
+*.pyc
