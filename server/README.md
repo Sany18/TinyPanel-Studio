@@ -193,6 +193,19 @@ running alongside either program. Override the port with
 `DISPLAY_SERVER_DEBUG_PORT=<port>`, or disable entirely with
 `DISPLAY_SERVER_DEBUG_PORT=0`.
 
+### Simulated device (no ESP32 required)
+
+Click **Simulate device (no ESP32)** in the Devices panel to develop without
+physical hardware. It runs a fake client (`src/virtualDevice.js`) through the
+exact same connection path a real ESP32's `net.Socket` goes through - it
+registers in the device registry, drives the same canvas program and
+ACK-lockstep loop (`runLockstep` in `src/server.js`), and ACKs each frame
+after a fixed delay standing in for real draw/SPI time. The debug and preview
+viewers can't tell it apart from a physical panel; only `device.simulated` in
+`/api/devices` marks it. Click the button again (or `DELETE
+/api/devices/simulate`) to disconnect it. Only one simulated device runs at a
+time, localhost-only, same as the other control-plane endpoints.
+
 ## Adding a new program
 
 Two ways to add a program:

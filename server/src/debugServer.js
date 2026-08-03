@@ -62,6 +62,20 @@ function startDebugServer(port, registry, services = {}) {
       return;
     }
 
+    if (requestUrl.pathname === '/api/devices/simulate' && req.method === 'POST') {
+      if (!isLoopback(req)) { json(res, 403, { error: 'simulated device requires localhost' }); return; }
+      if (!services.virtualDevice) { json(res, 404, { error: 'virtual device unavailable' }); return; }
+      json(res, 200, { device: registry.serialize(services.virtualDevice.start()) });
+      return;
+    }
+
+    if (requestUrl.pathname === '/api/devices/simulate' && req.method === 'DELETE') {
+      if (!isLoopback(req)) { json(res, 403, { error: 'simulated device requires localhost' }); return; }
+      if (!services.virtualDevice) { json(res, 404, { error: 'virtual device unavailable' }); return; }
+      json(res, 200, { stopped: services.virtualDevice.stop() });
+      return;
+    }
+
     if (requestUrl.pathname === '/api/debug/canvas-fps' && req.method === 'GET') {
       json(res, 200, { fps: getCanvasFps() });
       return;

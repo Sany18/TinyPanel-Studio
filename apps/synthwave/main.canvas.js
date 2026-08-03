@@ -11,7 +11,7 @@
 const WIDTH = 160;
 const HEIGHT = 128;
 const HORIZON = 64;
-const GROUND = '#000000c0';
+const GROUND = '#00000070';
 const GRID = '#d90280';
 const GRID_GLOW = '#4a0135';
 const GRID_HAZE = '#9c0166';
@@ -416,8 +416,6 @@ function render(ctx, state) {
     gridHazeGradient.addColorStop(0, GRID_HAZE);
     gridHazeGradient.addColorStop(1, '#000000');
   }
-  ctx.fillStyle = gridHazeGradient;
-  ctx.fillRect(0, D_HORIZON, WIDTH, 16);
 
   // Every grid line gets a dim halo glued to its own path, then every
   // bright core is stroked on top in its own pass - a cheap stand-in for

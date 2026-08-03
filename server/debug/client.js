@@ -9,6 +9,7 @@ const canvas = document.getElementById('panel');
 const ctx = canvas.getContext('2d');
 const status = document.getElementById('status');
 const devicesElement = document.getElementById('devices');
+const simulateButton = document.getElementById('simulate-device');
 const previewTitle = document.getElementById('preview-title');
 const rulerX = document.getElementById('ruler-x');
 const rulerY = document.getElementById('ruler-y');
@@ -343,6 +344,11 @@ function selectDevice(device) {
 function renderDevices(devices) {
   window.currentDevices = devices;
   devicesElement.replaceChildren();
+  if (simulateButton) {
+    const simulated = devices.find((device) => device.simulated && device.connected);
+    simulateButton.textContent = simulated ? 'Stop simulated device' : 'Simulate device (no ESP32)';
+    simulateButton.classList.toggle('active', Boolean(simulated));
+  }
   if (!devices.length) {
     devicesElement.textContent = 'no devices discovered';
     return;
@@ -352,7 +358,7 @@ function renderDevices(devices) {
     button.className = `device${device.id === selectedDeviceId ? ' selected' : ''}`;
     const stateClass = device.connected ? 'online' : 'offline';
     const state = device.connected ? 'online' : 'offline';
-    button.innerHTML = `<span class="${stateClass}">● ${state}</span> ${device.id}`
+    button.innerHTML = `<span class="${stateClass}">● ${state}</span> ${device.id}${device.simulated ? ' (simulated)' : ''}`
       + `<small>${device.program || 'no app'} · frames ${device.frames}`
       + ` · ACK ${device.lastAckMs === null ? '—' : device.lastAckMs.toFixed(1) + ' ms'}</small>`;
     button.addEventListener('click', () => selectDevice(device));
@@ -363,6 +369,19 @@ function renderDevices(devices) {
     if (firstOnline) selectDevice(firstOnline);
   }
 }
+
+simulateButton?.addEventListener('click', async () => {
+  const simulated = (window.currentDevices || []).find((device) => device.simulated && device.connected);
+  simulateButton.disabled = true;
+  try {
+    await fetch('/api/devices/simulate', { method: simulated ? 'DELETE' : 'POST' });
+    await refreshDevices();
+  } catch (error) {
+    devicesElement.textContent = `simulate device error: ${error.message}`;
+  } finally {
+    simulateButton.disabled = false;
+  }
+});
 
 async function refreshDevices() {
   try {

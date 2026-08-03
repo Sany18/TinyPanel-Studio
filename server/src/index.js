@@ -12,6 +12,7 @@ const { FirmwareService, SerialMonitorService, LogStream } = require('./firmware
 const { DeviceRegistry } = require('./deviceRegistry');
 const { VideoProgram } = require('./programs/videoProgram');
 const { HardwareProfileService } = require('./hardwareProfile');
+const { createVirtualDevice } = require('./virtualDevice');
 
 const PORT = process.env.DISPLAY_SERVER_PORT ? Number(process.env.DISPLAY_SERVER_PORT) : 8765;
 // Device Studio manages Canvas apps, so its normal startup mode must render
@@ -64,7 +65,7 @@ async function main() {
     console.log(`video stream ready (${process.env.DISPLAY_VIDEO_SOURCE || 'generated test pattern'})`);
   }
 
-  const server = net.createServer((socket) => {
+  function attachClient(socket) {
     const device = registry.register(socket);
     device.program = PROGRAM;
     console.log(`client connected: ${socket.remoteAddress}:${socket.remotePort} (id=${device.id})`);
@@ -83,15 +84,45 @@ async function main() {
     } else {
       runSynthwave(socket, { device, registry });
     }
-  });
+    return device;
+  }
+
+  const server = net.createServer(attachClient);
 
   server.listen(PORT, () => {
     console.log(`display_server listening on :${PORT} (program=${PROGRAM})`);
   });
 
+  // Debugging without real hardware: a virtual device is a fake socket (see
+  // virtualDevice.js) run through the exact same attachClient() path a real
+  // ESP32's net.Socket goes through, so it registers, streams, and shows up
+  // in the debug/preview viewers identically - just with no physical panel
+  // on the other end. Toggled from Device Studio (see debugServer.js's
+  // /api/devices/simulate), not started automatically.
+  let virtualDeviceSocket = null;
+  const virtualDevice = {
+    active: () => Boolean(virtualDeviceSocket),
+    start() {
+      if (virtualDeviceSocket) return registry.get('sim');
+      const socket = createVirtualDevice();
+      virtualDeviceSocket = socket;
+      socket.on('close', () => {
+        if (virtualDeviceSocket === socket) virtualDeviceSocket = null;
+      });
+      const device = attachClient(socket);
+      device.simulated = true;
+      return device;
+    },
+    stop() {
+      if (!virtualDeviceSocket) return false;
+      virtualDeviceSocket.destroy();
+      return true;
+    },
+  };
+
   if (DEBUG_PORT) {
     require('./debugServer').startDebugServer(DEBUG_PORT, registry, {
-      appLibrary, firmwareService, serialMonitor, appLog, hardwareProfile,
+      appLibrary, firmwareService, serialMonitor, appLog, hardwareProfile, virtualDevice,
     });
   }
 }
