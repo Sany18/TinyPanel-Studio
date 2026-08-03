@@ -5,7 +5,7 @@
  * @width 160
  * @height 128
  * @orientation landscape
- * @fps 1
+ * @fps 4
  * @wifiSleep true
  * @cpuMultiplier 0.5
  */
@@ -14,6 +14,20 @@ const INTERVAL = '1h';
 const CANDLE_COUNT = 40;
 const REFRESH_MS = 1000;
 const BINANCE_API = 'https://fapi.binance.com/fapi/v1/klines';
+const COLOR_THEME = 'balanced'; // 'balanced' | 'contrast'
+
+const COLOR_THEMES = {
+  balanced: {
+    BG: '#0b0318', GRID: '#291747', ACCENT: '#d81b78',
+    UP: '#20d9d2', DOWN: '#f04464', TEXT: '#ded7ed', MUTED: '#766b8c',
+    WARNING: '#d69a32', CURRENT_UP: '#176b68', CURRENT_DOWN: '#70293b',
+  },
+  contrast: {
+    BG: '#05000d', GRID: '#55308c', ACCENT: '#ff2085',
+    UP: '#00ffff', DOWN: '#ff3048', TEXT: '#ffffff', MUTED: '#b8a9d1',
+    WARNING: '#ffb000', CURRENT_UP: '#087f7f', CURRENT_DOWN: '#8f1d32',
+  },
+};
 
 const market = {
   symbol: SYMBOL,
@@ -63,22 +77,16 @@ function updateMarketInBackground() {
 }
 
 function render(ctx, state) {
-  const BG = '#100020';
-  const GRID = '#301860';
-  const MAGENTA = '#ff207d';
-  const CYAN = '#00ffff';
-  const RED = '#ff2020';
-  const GREEN = '#00ff40';
-  const CURRENT_UP = '#176b3a';
-  const CURRENT_DOWN = '#743039';
-  const EXTREME_LABEL = '#7f899d';
+  const {
+    BG, GRID, ACCENT, UP, DOWN, TEXT, MUTED, WARNING, CURRENT_UP, CURRENT_DOWN,
+  } = COLOR_THEMES[COLOR_THEME] || COLOR_THEMES.balanced;
   const TOP_DIVIDER_Y = 12;
   const CHART_TOP = 14;
   const CHART_BOTTOM = 107;
   const BOTTOM_DIVIDER_Y = 109;
 
   ctx.clear(BG);
-  ctx.strokeStyle = MAGENTA;
+  ctx.strokeStyle = ACCENT;
   ctx.drawLine(0, TOP_DIVIDER_Y, 159, TOP_DIVIDER_Y);
   ctx.drawLine(0, BOTTOM_DIVIDER_Y, 159, BOTTOM_DIVIDER_Y);
 
@@ -86,7 +94,7 @@ function render(ctx, state) {
   const data = market;
   if (!data || !data.candles || data.candles.length === 0) {
     ctx.drawText(data && data.status === 'error' ? 'DATA ERROR' : 'LOADING DATA', 4, 56, {
-      color: data && data.status === 'error' ? RED : '#ffb000', scale: 2,
+      color: data && data.status === 'error' ? DOWN : WARNING, scale: 2,
     });
     return;
   }
@@ -95,7 +103,7 @@ function render(ctx, state) {
   const first = candles[0];
   const last = candles[candles.length - 1];
   const percent = (last.close - first.open) / first.open * 100;
-  const direction = percent >= 0 ? GREEN : RED;
+  const direction = percent >= 0 ? UP : DOWN;
   const price = `$${last.close.toFixed(last.close >= 1000 ? 1 : 3)}`;
   const percentText = `${percent >= 0 ? '+' : ''}${percent.toFixed(1)}%`;
   ctx.drawText(price, 2, 1, { color: direction, scale: 2 });
@@ -137,7 +145,7 @@ function render(ctx, state) {
   for (const { level, y } of gridLevels) {
     const label = `$${level}`;
     const labelY = Math.max(CHART_TOP, Math.min(CHART_BOTTOM - 4, y - 2));
-    ctx.drawText(label, 1, labelY, { color: GRID, background: BG });
+    ctx.drawText(label, 1, labelY, { color: MUTED, background: BG });
   }
 
   const slot = 160 / candles.length;
@@ -149,7 +157,7 @@ function render(ctx, state) {
 
   for (let index = 0; index < candles.length; index++) {
     const candle = candles[index];
-    const color = candle.close >= candle.open ? CYAN : RED;
+    const color = candle.close >= candle.open ? UP : DOWN;
     const center = Math.floor(index * slot + slot / 2);
     const yHigh = priceY(candle.high);
     const yLow = priceY(candle.low);
@@ -171,24 +179,24 @@ function render(ctx, state) {
       : Math.max(0, center - labelWidth - 2);
     const preferredY = placeBelow ? y + 2 : y - 6;
     const labelY = Math.max(CHART_TOP, Math.min(CHART_BOTTOM - 4, preferredY));
-    ctx.drawText(label, labelX, labelY, { color: EXTREME_LABEL, background: BG });
+    ctx.drawText(label, labelX, labelY, { color: MUTED, background: BG });
   }
 
   drawExtremeLabel(high, highIndex, priceY(high), false);
   drawExtremeLabel(low, lowIndex, priceY(low), true);
 
-  ctx.drawText(`${data.symbol} ${data.interval}`, 2, 111, { color: '#ffffff' });
+  ctx.drawText(`${data.symbol} ${data.interval}`, 2, 111, { color: TEXT });
 
   const status = data.status === 'stale' ? 'STALE' : 'LIVE';
   const statusX = 160 - status.length * 4;
-  ctx.drawText(status, statusX, 111, { color: data.status === 'stale' ? '#ffb000' : GREEN });
+  ctx.drawText(status, statusX, 111, { color: data.status === 'stale' ? WARNING : UP });
 
   const dateObj = new Date();
   const date = dateObj.toLocaleDateString('uk-UA');
   const time = dateObj.toLocaleTimeString('uk-UA');
 
-  ctx.drawText(date, 2, 118, { color: '#007e8f', scale: 2 });
+  ctx.drawText(date, 2, 118, { color: MUTED, scale: 2 });
   const timeX = 161 - time.length * 8;
-  ctx.drawText(time, timeX, 118, { color: '#007e8f', scale: 2 });
-  ctx.drawText('By Hoxz', 96, 4, { color: '#600372' });
+  ctx.drawText(time, timeX, 118, { color: MUTED, scale: 2 });
+  ctx.drawText('By Hoxz', 96, 4, { color: MUTED });
 }
