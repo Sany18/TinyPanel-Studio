@@ -6,6 +6,8 @@
  * @height 128
  * @orientation landscape
  * @fps 30
+ * @wifiSleep true
+ * @cpuMultiplier 0.5
  */
 function render(ctx, state) {
   ctx.clear('#000000');

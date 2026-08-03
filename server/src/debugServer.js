@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const {
   frameBus, getCanvasFps, setCanvasFps, getDisplayRotation, setDisplayRotation,
+  orientationToRotation,
 } = require('./server');
 
 const DEBUG_DIR = path.join(__dirname, '..', 'debug');
@@ -37,10 +38,6 @@ function isLoopback(req) {
 function json(res, status, value) {
   res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(value));
-}
-
-function orientationToRotation(orientation) {
-  return orientation === 'landscape-reversed' ? 1 : 3;
 }
 
 function rotationToOrientation(rotation) {

@@ -121,6 +121,8 @@ class DisplayFramebuffer {
         offset += 11;
       } else if (op === 0x06) {
         offset += 2;
+      } else if (op === 0x07) {
+        offset += 3;
       } else if (op === 0xe0) {
         this.blitTile(buf[offset + 1], buf, offset + 2);
         offset += 514;

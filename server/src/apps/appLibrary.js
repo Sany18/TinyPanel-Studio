@@ -9,7 +9,23 @@ const APP_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const CONFIG_BLOCK = /\/\*\*[\s\S]*?@tinypanel[\s\S]*?\*\//;
 const CONFIG_DEFAULTS = Object.freeze({
   name: 'Canvas App', description: '', width: 160, height: 128, orientation: 'landscape', fps: 30,
+  wifiSleep: false, cpuMultiplier: 1,
 });
+const CONFIG_KEYS = Object.freeze(Object.keys(CONFIG_DEFAULTS));
+const CONFIG_HELP = Object.freeze({
+  name: '@name <text> (1–100 characters)',
+  description: '@description <text> (up to 500 characters)',
+  width: '@width <integer> (1–4096)',
+  height: '@height <integer> (1–4096)',
+  orientation: '@orientation landscape | landscape-reversed | portrait | portrait-reversed',
+  fps: '@fps <number> (1–60)',
+  wifiSleep: '@wifiSleep true | false',
+  cpuMultiplier: '@cpuMultiplier 0.5 | 1',
+});
+
+function configError(key, message) {
+  return `${message}. Use: ${CONFIG_HELP[key]}.`;
+}
 const DEFAULT_SOURCE = `/**
  * @tinypanel
  * @name Canvas App
@@ -18,6 +34,8 @@ const DEFAULT_SOURCE = `/**
  * @height 128
  * @orientation landscape
  * @fps 30
+ * @wifiSleep false
+ * @cpuMultiplier 1
  */
 function render(ctx, state) {
   ctx.clear('#000000');
@@ -28,20 +46,29 @@ function render(ctx, state) {
 
 function validateConfig(value, fallback = {}) {
   const config = { ...CONFIG_DEFAULTS, ...fallback, ...value };
-  if (typeof config.name !== 'string' || !config.name.trim()) throw new TypeError('name is required');
-  if (config.name.trim().length > 100) throw new TypeError('name must be no longer than 100 characters');
-  if (/[\r\n]|\*\//.test(config.name)) throw new TypeError('name must fit on one JSDoc line');
-  if (typeof config.description !== 'string') throw new TypeError('description must be a string');
-  if (config.description.length > 500) throw new TypeError('description must be no longer than 500 characters');
-  if (/[\r\n]|\*\//.test(config.description)) throw new TypeError('description must fit on one JSDoc line');
+  if (typeof config.name !== 'string' || !config.name.trim()) throw new TypeError(configError('name', '@name is required'));
+  if (config.name.trim().length > 100) throw new TypeError(configError('name', '@name must be no longer than 100 characters'));
+  if (/[\r\n]|\*\//.test(config.name)) throw new TypeError(configError('name', '@name must fit on one JSDoc line'));
+  if (typeof config.description !== 'string') throw new TypeError(configError('description', '@description must be a string'));
+  if (config.description.length > 500) throw new TypeError(configError('description', '@description must be no longer than 500 characters'));
+  if (/[\r\n]|\*\//.test(config.description)) throw new TypeError(configError('description', '@description must fit on one JSDoc line'));
   config.width = Number(config.width);
   config.height = Number(config.height);
   config.fps = Number(config.fps);
-  if (!Number.isInteger(config.width) || config.width < 1 || config.width > 4096) throw new RangeError('width must be between 1 and 4096');
-  if (!Number.isInteger(config.height) || config.height < 1 || config.height > 4096) throw new RangeError('height must be between 1 and 4096');
-  if (!Number.isFinite(config.fps) || config.fps < 1 || config.fps > 60) throw new RangeError('fps must be between 1 and 60');
+  config.cpuMultiplier = Number(config.cpuMultiplier);
+  if (typeof config.wifiSleep === 'string') {
+    if (!/^(true|false)$/i.test(config.wifiSleep)) throw new RangeError(configError('wifiSleep', '@wifiSleep must be true or false'));
+    config.wifiSleep = config.wifiSleep.toLowerCase() === 'true';
+  }
+  if (typeof config.wifiSleep !== 'boolean') throw new RangeError(configError('wifiSleep', '@wifiSleep must be true or false'));
+  if (!Number.isInteger(config.width) || config.width < 1 || config.width > 4096) throw new RangeError(configError('width', '@width must be an integer between 1 and 4096'));
+  if (!Number.isInteger(config.height) || config.height < 1 || config.height > 4096) throw new RangeError(configError('height', '@height must be an integer between 1 and 4096'));
+  if (!Number.isFinite(config.fps) || config.fps < 1 || config.fps > 60) throw new RangeError(configError('fps', '@fps must be between 1 and 60'));
+  if (![0.5, 1].includes(config.cpuMultiplier)) {
+    throw new RangeError(configError('cpuMultiplier', '@cpuMultiplier must be 0.5 or 1'));
+  }
   if (!['landscape', 'landscape-reversed', 'portrait', 'portrait-reversed'].includes(config.orientation)) {
-    throw new RangeError('orientation is invalid');
+    throw new RangeError(configError('orientation', `Unknown @orientation value "${config.orientation}"`));
   }
   config.name = config.name.trim();
   config.description = config.description.trim();
@@ -56,13 +83,17 @@ function parseConfig(source, fallback = {}) {
     const match = line.match(/^\s*\*\s*@([a-z]+)(?:\s+(.*?))?\s*$/i);
     if (!match) continue;
     const [, key, raw = ''] = match;
-    if (key !== 'tinypanel' && Object.hasOwn(CONFIG_DEFAULTS, key)) values[key] = raw;
+    if (key === 'tinypanel') continue;
+    if (!Object.hasOwn(CONFIG_DEFAULTS, key)) {
+      throw new RangeError(`Unknown TinyPanel parameter @${key}. Available parameters: ${CONFIG_KEYS.map((name) => `@${name}`).join(', ')}.`);
+    }
+    values[key] = raw;
   }
   return validateConfig(values, fallback);
 }
 
 function configBlock(config) {
-  return `/**\n * @tinypanel\n * @name ${config.name}\n * @description ${config.description}\n * @width ${config.width}\n * @height ${config.height}\n * @orientation ${config.orientation}\n * @fps ${config.fps}\n */`;
+  return `/**\n * @tinypanel\n * @name ${config.name}\n * @description ${config.description}\n * @width ${config.width}\n * @height ${config.height}\n * @orientation ${config.orientation}\n * @fps ${config.fps}\n * @wifiSleep ${config.wifiSleep}\n * @cpuMultiplier ${config.cpuMultiplier}\n */`;
 }
 
 function writeConfig(source, values, fallback = {}) {

@@ -51,12 +51,16 @@ test('discovers metadata-free apps and persists display settings in JSDoc', () =
  * @height 240
  * @orientation landscape-reversed
  * @fps 12
+ * @wifiSleep true
+ * @cpuMultiplier 0.5
  */
 function render(ctx) { ctx.clear(0); }
 `);
   try {
     const library = new AppLibrary(root);
     assert.equal(library.active.config.fps, 12);
+    assert.equal(library.active.config.wifiSleep, true);
+    assert.equal(library.active.config.cpuMultiplier, 0.5);
     assert.equal(library.list()[0].name, 'Configured App');
     library.updateConfig('configured-app', { fps: 1, orientation: 'landscape' });
     const source = fs.readFileSync(path.join(appDir, 'main.canvas.js'), 'utf8');
@@ -78,6 +82,21 @@ test('rejects unsafe IDs and invalid source without creating an app', () => {
   } finally {
     fs.rmSync(root, { recursive: true });
   }
+});
+
+test('reports actionable JSDoc configuration errors', () => {
+  assert.throws(
+    () => parseConfig('/**\n * @tinypanel\n * @fps fast\n */'),
+    /@fps must be between 1 and 60.*Use: @fps <number> \(1–60\)/,
+  );
+  assert.throws(
+    () => parseConfig('/**\n * @tinypanel\n * @wifiSleep maybe\n */'),
+    /@wifiSleep must be true or false.*Use: @wifiSleep true \| false/,
+  );
+  assert.throws(
+    () => parseConfig('/**\n * @tinypanel\n * @frameRate 30\n */'),
+    /Unknown TinyPanel parameter @frameRate.*@fps/,
+  );
 });
 
 test('hot reloads valid external source edits and reports invalid ones', async () => {

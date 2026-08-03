@@ -66,6 +66,8 @@ the start of `main.canvas.js`; no separate manifest is required:
  * @height 128
  * @orientation landscape
  * @fps 30
+ * @wifiSleep false
+ * @cpuMultiplier 1
  */
 ```
 

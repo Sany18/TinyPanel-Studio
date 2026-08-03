@@ -9,6 +9,7 @@ const OP_FILL_CIRCLE = 0x03;
 const OP_FILL_TRIANGLE = 0x04;
 const OP_DRAW_LINE = 0x05;
 const OP_SET_ROTATION = 0x06;
+const OP_SET_POWER_CONFIG = 0x07;
 const OP_BLIT_TILE = 0xe0;
 const OP_BLIT_RECT = 0xe1;
 const OP_JPEG_FRAME = 0xe2;
@@ -93,6 +94,16 @@ class FrameBuilder {
     return this;
   }
 
+  setPowerConfig(wifiSleep, cpuMultiplier, prepend = false) {
+    if (typeof wifiSleep !== 'boolean') throw new TypeError('wifiSleep must be a boolean');
+    if (![0.5, 1].includes(cpuMultiplier)) {
+      throw new RangeError('cpuMultiplier must be 0.5 or 1');
+    }
+    const buf = Buffer.from([OP_SET_POWER_CONFIG, wifiSleep ? 1 : 0, Math.round(cpuMultiplier * 100)]);
+    if (prepend) this._chunks.unshift(buf); else this._chunks.push(buf);
+    return this;
+  }
+
   // pixelDataBE: a pre-built TILE_PIXEL_BYTES-long Buffer of RGB565 pixels,
   // row-major within the tile, big-endian - the caller (htmlProgram.js)
   // already has to build this during RGB565 conversion, so this just wraps
@@ -164,6 +175,7 @@ module.exports = {
   OP_FILL_TRIANGLE,
   OP_DRAW_LINE,
   OP_SET_ROTATION,
+  OP_SET_POWER_CONFIG,
   OP_BLIT_TILE,
   OP_BLIT_RECT,
   OP_JPEG_FRAME,

@@ -17,6 +17,8 @@ Place one `@tinypanel` JSDoc block near the beginning of the file:
  * @height 128
  * @orientation landscape
  * @fps 30
+ * @wifiSleep false
+ * @cpuMultiplier 1
  */
 
 function render(ctx, state) {
@@ -38,6 +40,8 @@ configuration. Unknown tags are ignored.
 | `@height` | integer | `128` | 1–4096 | Logical display height in pixels. |
 | `@orientation` | enum | `landscape` | see values below | Preferred display orientation. |
 | `@fps` | number | `30` | 1–60 | Target maximum render and transport frame rate. |
+| `@wifiSleep` | boolean | `false` | `true` or `false` | Enables ESP32 Wi-Fi modem sleep for this app. |
+| `@cpuMultiplier` | number | `1` | `0.5` or `1` | Runs the ESP32 at half or full boot CPU frequency. On the 160 MHz ESP32-C3 these are the Wi-Fi-safe 80 and 160 MHz modes. |
 
 Supported orientation values:
 
@@ -64,6 +68,26 @@ can use `@fps 60` when the device and transport can sustain it.
 An application's network refresh interval does not need to equal its render
 rate. For example, an API can refresh once per minute while the UI renders at
 30 FPS.
+
+## Device power behavior
+
+`@wifiSleep` and `@cpuMultiplier` are independent. A static dashboard can use
+Wi-Fi modem sleep and half CPU frequency, while a latency-sensitive animation
+can keep modem sleep disabled at full frequency:
+
+```js
+// Low-power dashboard
+ * @wifiSleep true
+ * @cpuMultiplier 0.5
+
+// Smooth animation
+ * @wifiSleep false
+ * @cpuMultiplier 1
+```
+
+The current validated ESP32-C3 target boots at 160 MHz, so multiplier `0.5`
+requests 80 MHz. These settings are sent when an application starts or its
+configuration changes and require firmware that supports `SET_POWER_CONFIG`.
 
 ## Display dimensions
 

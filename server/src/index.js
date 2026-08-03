@@ -3,7 +3,8 @@
 const net = require('net');
 const path = require('path');
 const {
-  runSynthwave, runHtmlProgram, runCanvasProgram, runVideoProgram, setDisplayRotation,
+  runSynthwave, runHtmlProgram, runCanvasProgram, runVideoProgram,
+  setDisplayRotation, orientationToRotation,
 } = require('./server');
 const { HtmlProgram } = require('./programs/htmlProgram');
 const { LiveCanvasProgram } = require('./apps/liveApp');
@@ -32,9 +33,10 @@ const DEBUG_PORT = DEBUG_PORT_RAW === '0' || DEBUG_PORT_RAW === 'off'
 async function main() {
   const registry = new DeviceRegistry();
   const appLibrary = new AppLibrary(path.join(__dirname, '..', '..', 'apps'));
+  setDisplayRotation(orientationToRotation(appLibrary.active.config.orientation));
   appLibrary.on('change', (event) => {
     if (event.type === 'external-change' && event.active) {
-      setDisplayRotation(appLibrary.active.config.orientation === 'landscape-reversed' ? 1 : 3);
+      setDisplayRotation(orientationToRotation(appLibrary.active.config.orientation));
     }
   });
   const firmwareProjectDir = path.join(__dirname, '..', '..', 'firmware', 'display-client');

@@ -3,7 +3,8 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { DisplayFramebuffer } = require('../src/displayFramebuffer');
-const { FrameBuilder, OP_JPEG_FRAME } = require('../src/protocol');
+const { FrameBuilder, OP_JPEG_FRAME, OP_SET_POWER_CONFIG } = require('../src/protocol');
+const { orientationToRotation } = require('../src/server');
 
 test('applies vector and tile commands to bounded RGB565 state', () => {
   const sourceTile = Buffer.alloc(512);
@@ -38,6 +39,19 @@ test('encodes display rotation without changing the logical framebuffer', () => 
   framebuffer.applyFrame(encoded);
   assert.equal(encoded[0], 0x06);
   assert.equal(framebuffer.pixels[0], 0x1234);
+});
+
+test('maps reversed landscape to the opposite TFT rotation', () => {
+  assert.equal(orientationToRotation('landscape'), 3);
+  assert.equal(orientationToRotation('landscape-reversed'), 1);
+});
+
+test('encodes hardware-only application power configuration', () => {
+  const encoded = new FrameBuilder().setPowerConfig(true, 0.5).frameEnd().toBuffer();
+  assert.deepEqual([...encoded], [OP_SET_POWER_CONFIG, 1, 50, 0xf0]);
+  assert.doesNotThrow(() => new DisplayFramebuffer().applyFrame(encoded));
+  assert.throws(() => new FrameBuilder().setPowerConfig(false, 0.25), /cpuMultiplier/);
+  assert.throws(() => new FrameBuilder().setPowerConfig(false, 0.75), /cpuMultiplier/);
 });
 
 test('full snapshot reconstructs the same framebuffer without history', () => {

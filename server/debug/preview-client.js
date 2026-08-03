@@ -50,6 +50,8 @@ async function decode(bytes) {
       ctx.lineTo(i16(bytes, index + 5) + 0.5, i16(bytes, index + 7) + 0.5); ctx.stroke(); index += 11;
     } else if (op === 0x06) {
       index += 2;
+    } else if (op === 0x07) {
+      index += 3;
     } else if (op === 0xe0 || op === 0xe1) {
       const tile = op === 0xe0; const x = tile ? bytes[index + 1] % 10 * 16 : bytes[index + 1];
       const y = tile ? Math.floor(bytes[index + 1] / 10) * 16 : bytes[index + 2];

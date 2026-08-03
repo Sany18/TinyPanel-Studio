@@ -34,7 +34,8 @@ x values and relies on `Adafruit_GFX` to clip them.
 | `0x04` | `FILL_TRIANGLE` | `x0,y0,x1,y1,x2,y2:i16×6`, `color:u16` | 15 | `fillTriangle(x0,y0,x1,y1,x2,y2,color)` |
 | `0x05` | `DRAW_LINE` | `x0,y0,x1,y1:i16×4`, `color:u16` | 11 | `drawLine(x0,y0,x1,y1,color)` |
 | `0x06` | `SET_ROTATION` | `rotation:u8` (`1` or `3`) | 2 | landscape orientation |
-| `0x07`–`0xDF` | *reserved* | — | — | future opcodes |
+| `0x07` | `SET_POWER_CONFIG` | `wifiSleep:u8`, `cpuPercent:u8` (`50` or `100`) | 3 | Wi-Fi modem sleep and CPU multiplier |
+| `0x08`–`0xDF` | *reserved* | — | — | future opcodes |
 | `0xE0` | `BLIT_TILE` | `tileIndex:u8`, `pixels:u16×256` | 514 | bulk tile blit (see Tile blit below) |
 | `0xE1` | `BLIT_RECT` | `x,y,w,h:u8×4`, `pixels:u16×w×h` | `5 + 2*w*h` | horizontal dirty strip |
 | `0xE2` | `JPEG_FRAME` | `length:u16`, `jpeg:u8×length` | `3 + length` | full 160×128 JPEG frame |
@@ -50,8 +51,8 @@ must be wider than `uint8_t` (max 255).
 
 A single `ACK_BYTE = 0x06` travels in the **opposite** direction (ESP32 →
 server). It's a separate one-directional signal, not part of the
-server→ESP32 opcode space, so it can't collide with the reserved
-`0x06`–`0xDF` opcode range above.
+server→ESP32 opcode space, so it cannot collide with command opcodes traveling
+in the other direction.
 
 **Lockstep frame-level ACK**: after a frame's draw opcodes, the server
 appends `FRAME_END` and writes no more bytes until it receives `ACK_BYTE`

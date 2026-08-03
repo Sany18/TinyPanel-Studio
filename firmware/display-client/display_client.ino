@@ -26,6 +26,7 @@
 #include <SPI.h>
 #include <WiFi.h>
 #include <TJpg_Decoder.h>
+#include <esp32-hal-cpu.h>
 
 #include "secrets.h"
 #include "hardware_config.h"
@@ -71,6 +72,7 @@ enum Opcode : uint8_t {
   OP_FILL_TRIANGLE = 0x04,
   OP_DRAW_LINE     = 0x05,
   OP_SET_ROTATION  = 0x06,
+  OP_SET_POWER_CONFIG = 0x07,
   OP_BLIT_TILE     = 0xE0,
   OP_BLIT_RECT     = 0xE1,
   OP_JPEG_FRAME    = 0xE2,
@@ -89,6 +91,7 @@ static uint16_t rxLen = 0;
 static uint16_t expectedLen = 0; // 0 = "haven't read the opcode byte yet"
 static bool readingRectHeader = false;
 static bool readingJpegHeader = false;
+static uint32_t baseCpuFrequencyMhz = 160;
 
 // Per-frame diagnostics. total includes TCP gaps and drawing; draw includes
 // only dispatch()/SPI work. Printed after ACK so Serial cannot delay it.
@@ -111,6 +114,7 @@ void dispatch(const uint8_t* buf, uint16_t len);
 bool drawJpegBlock(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* pixels);
 
 void setup() {
+  baseCpuFrequencyMhz = getCpuFrequencyMhz();
   Serial.begin(115200);
   Serial.printf("display-client firmware %s\n", DISPLAY_FIRMWARE_VERSION);
 
@@ -210,6 +214,7 @@ uint16_t payloadLenForOpcode(uint8_t op) {
     case OP_FILL_TRIANGLE: return 14;
     case OP_DRAW_LINE:     return 10;
     case OP_SET_ROTATION:  return 1;
+    case OP_SET_POWER_CONFIG: return 2;
     case OP_BLIT_TILE:     return 513; // 1 (tileIndex) + 512 (pixel data)
     case OP_BLIT_RECT:     return 4; // initial x/y/w/h header; pixel length is dynamic
     case OP_JPEG_FRAME:    return 2; // initial u16 byte length; JPEG payload is dynamic
@@ -351,6 +356,18 @@ void dispatch(const uint8_t* buf, uint16_t len) {
     case OP_SET_ROTATION: {
       uint8_t rotation = buf[1];
       if (rotation == 1 || rotation == 3) TFTscreen.setRotation(rotation);
+      break;
+    }
+    case OP_SET_POWER_CONFIG: {
+      const bool wifiSleep = buf[1] != 0;
+      const uint8_t cpuPercent = buf[2];
+      if (cpuPercent == 50 || cpuPercent == 100) {
+        const uint32_t requestedMhz = (baseCpuFrequencyMhz * cpuPercent) / 100;
+        if (!setCpuFrequencyMhz(requestedMhz)) {
+          Serial.printf("CPU frequency %lu MHz is unsupported by this controller\n", requestedMhz);
+        }
+      }
+      WiFi.setSleep(wifiSleep);
       break;
     }
     case OP_BLIT_TILE: {

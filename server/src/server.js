@@ -48,6 +48,10 @@ function setDisplayRotation(value) {
   return displayRotation;
 }
 
+function orientationToRotation(orientation) {
+  return orientation === 'landscape-reversed' ? 1 : 3;
+}
+
 if (PERF_LOG_ENABLED) {
   setInterval(() => {
     const now = performance.now();
@@ -181,13 +185,24 @@ function runHtmlProgram(socket, htmlProgram, options = {}) {
 
 function runCanvasProgram(socket, canvasProgram, options = {}) {
   let sentRotation = null;
+  let sentPowerConfig = null;
   runLockstep(socket, () => {
-    const rotationChanged = sentRotation !== displayRotation;
+    const config = canvasProgram.store.active?.config || {};
+    // JSDoc is authoritative for Canvas apps, including startup and hot reloads.
+    const desiredRotation = config.orientation
+      ? orientationToRotation(config.orientation)
+      : displayRotation;
+    const rotationChanged = sentRotation !== desiredRotation;
     if (rotationChanged) canvasProgram.renderer.resetDiff();
     const frame = canvasProgram.nextFrame();
+    const powerConfig = `${Boolean(config.wifiSleep)}:${config.cpuMultiplier ?? 1}`;
+    if (powerConfig !== sentPowerConfig) {
+      frame.setPowerConfig(Boolean(config.wifiSleep), config.cpuMultiplier ?? 1, true);
+      sentPowerConfig = powerConfig;
+    }
     if (rotationChanged) {
-      frame.setRotation(displayRotation, true);
-      sentRotation = displayRotation;
+      frame.setRotation(desiredRotation, true);
+      sentRotation = desiredRotation;
     }
     return frame;
   }, {
@@ -203,4 +218,5 @@ function runVideoProgram(socket, videoProgram, options = {}) {
 module.exports = {
   runLockstep, runSynthwave, runHtmlProgram, runCanvasProgram, runVideoProgram,
   frameBus, getCanvasFps, setCanvasFps, getDisplayRotation, setDisplayRotation,
+  orientationToRotation,
 };

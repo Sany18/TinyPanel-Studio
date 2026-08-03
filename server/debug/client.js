@@ -268,6 +268,8 @@ async function decodeFrame(bytes) {
       i += 11;
     } else if (op === 0x06) { // SET_ROTATION (physical display only)
       i += 2;
+    } else if (op === 0x07) { // SET_POWER_CONFIG (physical display only)
+      i += 3;
     } else if (op === 0xe0) { // BLIT_TILE
       const tileIndex = bytes[i + 1];
       const tileCol = tileIndex % TILES_X;

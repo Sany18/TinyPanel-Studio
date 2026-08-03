@@ -6,10 +6,12 @@
  * @height 128
  * @orientation landscape
  * @fps 1
+ * @wifiSleep true
+ * @cpuMultiplier 0.5
  */
 const SYMBOL = 'BTCUSDT';
 const INTERVAL = '1h';
-const CANDLE_COUNT = 20;
+const CANDLE_COUNT = 40;
 const REFRESH_MS = 1000;
 const BINANCE_API = 'https://fapi.binance.com/fapi/v1/klines';
 
@@ -67,13 +69,18 @@ function render(ctx, state) {
   const CYAN = '#00ffff';
   const RED = '#ff2020';
   const GREEN = '#00ff40';
+  const CURRENT_UP = '#176b3a';
+  const CURRENT_DOWN = '#743039';
+  const EXTREME_LABEL = '#7f899d';
+  const TOP_DIVIDER_Y = 12;
+  const CHART_TOP = 14;
+  const CHART_BOTTOM = 107;
+  const BOTTOM_DIVIDER_Y = 109;
 
   ctx.clear(BG);
-  ctx.strokeStyle = GRID;
-  for (let y = 30; y <= 94; y += 16) ctx.drawLine(0, y, 159, y);
   ctx.strokeStyle = MAGENTA;
-  ctx.drawLine(0, 20, 159, 20);
-  ctx.drawLine(0, 101, 159, 101);
+  ctx.drawLine(0, TOP_DIVIDER_Y, 159, TOP_DIVIDER_Y);
+  ctx.drawLine(0, BOTTOM_DIVIDER_Y, 159, BOTTOM_DIVIDER_Y);
 
   updateMarketInBackground();
   const data = market;
@@ -91,22 +98,54 @@ function render(ctx, state) {
   const direction = percent >= 0 ? GREEN : RED;
   const price = `$${last.close.toFixed(last.close >= 1000 ? 1 : 3)}`;
   const percentText = `${percent >= 0 ? '+' : ''}${percent.toFixed(1)}%`;
-  ctx.drawText(price, 2, 2, { color: direction, scale: 2 });
-  ctx.drawText(percentText, 158 - percentText.length * 4, 12, { color: direction });
+  ctx.drawText(price, 2, 1, { color: direction, scale: 2 });
+  ctx.drawText(percentText, 158 - percentText.length * 4, 4, { color: direction });
 
   let low = candles[0].low;
   let high = candles[0].high;
-  for (const candle of candles) {
-    low = Math.min(low, candle.low);
-    high = Math.max(high, candle.high);
+  let lowIndex = 0;
+  let highIndex = 0;
+  for (let index = 0; index < candles.length; index++) {
+    const candle = candles[index];
+    if (candle.low < low) {
+      low = candle.low;
+      lowIndex = index;
+    }
+    if (candle.high > high) {
+      high = candle.high;
+      highIndex = index;
+    }
   }
-  const range = Math.max(0.000001, high - low);
-  const chartTop = 22;
-  const chartBottom = 98;
-  const chartHeight = chartBottom - chartTop;
-  const priceY = (value) => chartBottom - Math.round((value - low) / range * chartHeight);
+  const GRID_STEP = 500;
+  const axisLow = Math.floor(low / GRID_STEP) * GRID_STEP;
+  let axisHigh = Math.ceil(high / GRID_STEP) * GRID_STEP;
+  if (axisHigh === axisLow) axisHigh += GRID_STEP;
+  const range = axisHigh - axisLow;
+  const chartHeight = CHART_BOTTOM - CHART_TOP;
+  const priceY = (value) => CHART_BOTTOM - Math.round((value - axisLow) / range * chartHeight);
+  const gridLevels = [];
+  ctx.strokeStyle = GRID;
+  for (let level = axisLow; level <= axisHigh; level += GRID_STEP) {
+    const y = priceY(level);
+    ctx.drawLine(0, y, 159, y);
+    gridLevels.push({ level, y });
+  }
+  const currentPriceY = priceY(last.close);
+  ctx.strokeStyle = percent >= 0 ? CURRENT_UP : CURRENT_DOWN;
+  ctx.drawLine(0, currentPriceY, 159, currentPriceY);
+
+  for (const { level, y } of gridLevels) {
+    const label = `$${level}`;
+    const labelY = Math.max(CHART_TOP, Math.min(CHART_BOTTOM - 4, y - 2));
+    ctx.drawText(label, 1, labelY, { color: GRID, background: BG });
+  }
+
   const slot = 160 / candles.length;
-  const bodyWidth = Math.max(2, Math.floor(slot) - 2);
+  const availableBodyWidth = Math.max(1, Math.floor(slot) - 1);
+  // An odd body width gives the 1 px wick a real center pixel.
+  const bodyWidth = availableBodyWidth % 2 === 0
+    ? Math.max(1, availableBodyWidth - 1)
+    : availableBodyWidth;
 
   for (let index = 0; index < candles.length; index++) {
     const candle = candles[index];
@@ -123,15 +162,33 @@ function render(ctx, state) {
     ctx.fillRect(center - Math.floor(bodyWidth / 2), bodyTop, bodyWidth, bodyHeight);
   }
 
-  ctx.drawText(`${data.symbol} ${data.interval}`, 2, 106, { color: '#ffffff' });
+  function drawExtremeLabel(value, index, y, placeBelow) {
+    const label = `$${value.toFixed(0)}`;
+    const labelWidth = label.length * 4;
+    const center = Math.floor(index * slot + slot / 2);
+    const labelX = center + labelWidth + 3 <= 160
+      ? center + 3
+      : Math.max(0, center - labelWidth - 2);
+    const preferredY = placeBelow ? y + 2 : y - 6;
+    const labelY = Math.max(CHART_TOP, Math.min(CHART_BOTTOM - 4, preferredY));
+    ctx.drawText(label, labelX, labelY, { color: EXTREME_LABEL, background: BG });
+  }
+
+  drawExtremeLabel(high, highIndex, priceY(high), false);
+  drawExtremeLabel(low, lowIndex, priceY(low), true);
+
+  ctx.drawText(`${data.symbol} ${data.interval}`, 2, 111, { color: '#ffffff' });
 
   const status = data.status === 'stale' ? 'STALE' : 'LIVE';
-  ctx.drawText(status, 158 - status.length * 4, 106, { color: data.status === 'stale' ? '#ffb000' : GREEN });
+  const statusX = 160 - status.length * 4;
+  ctx.drawText(status, statusX, 111, { color: data.status === 'stale' ? '#ffb000' : GREEN });
 
   const dateObj = new Date();
   const date = dateObj.toLocaleDateString('uk-UA');
   const time = dateObj.toLocaleTimeString('uk-UA');
 
-  ctx.drawText(`${date} ${time}`, 2, 115, { color: '#007e8f', scale: 2 });
-  ctx.drawText('By Hoxz', 130, 2, { color: '#600372' });
+  ctx.drawText(date, 2, 118, { color: '#007e8f', scale: 2 });
+  const timeX = 161 - time.length * 8;
+  ctx.drawText(time, timeX, 118, { color: '#007e8f', scale: 2 });
+  ctx.drawText('By Hoxz', 96, 4, { color: '#600372' });
 }

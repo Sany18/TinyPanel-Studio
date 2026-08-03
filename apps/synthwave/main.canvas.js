@@ -4,8 +4,10 @@
  * @description Animated retro sun, mountains, and perspective grid
  * @width 160
  * @height 128
- * @orientation landscape
+ * @orientation landscape-reversed
  * @fps 30
+ * @wifiSleep false
+ * @cpuMultiplier 0.5
  */
 
 const WIDTH = 160;
