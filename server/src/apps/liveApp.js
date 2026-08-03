@@ -17,6 +17,7 @@ function compile(source, filename = 'live.canvas.js', consoleImpl = SILENT_CONSO
     URL,
     URLSearchParams,
     AbortController,
+    AbortSignal,
   });
   const script = new vm.Script(
     `'use strict';\n${source}\n`
@@ -83,7 +84,9 @@ class LiveCanvasProgram {
       this.lastError = null;
     }
 
-    const appData = this.dataProvider ? this.dataProvider(this.store.active?.manifest || {}) : null;
+    const appData = this.dataProvider
+      ? this.dataProvider({ id: this.store.activeId, ...(this.store.active?.config || {}) })
+      : null;
     this.dataStatus = appData ? { status: appData.status, updatedAt: appData.updatedAt, error: appData.error } : null;
     const state = Object.freeze({
       frame: this.frame,

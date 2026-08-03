@@ -14,6 +14,7 @@ const { DeviceRegistry } = require('./deviceRegistry');
 const { VideoProgram } = require('./programs/videoProgram');
 const { HardwareProfileService } = require('./hardwareProfile');
 const { createVirtualDevice } = require('./virtualDevice');
+const { BinancePositionData } = require('./data/binancePositionData');
 
 const PORT = process.env.DISPLAY_SERVER_PORT ? Number(process.env.DISPLAY_SERVER_PORT) : 8765;
 // Device Studio manages Canvas apps, so its normal startup mode must render
@@ -50,6 +51,14 @@ async function main() {
     port: process.env.DISPLAY_SERIAL_PORT || null,
   });
   const appLog = new LogStream(500);
+  // Feeds the crypto-tracker app's biggest open Binance position in as
+  // state.data (see liveApp.js's dataProvider) - signing an authenticated
+  // Binance request needs Node's crypto module, which the app's sandboxed vm
+  // context deliberately doesn't have, so the signed poll has to live here.
+  const binancePosition = new BinancePositionData({
+    secretsPath: path.join(__dirname, '..', '..', 'apps', 'crypto-tracker', 'secrets.h'),
+    symbol: 'BTCUSDT', // matches crypto-tracker's own hardcoded SYMBOL/chart
+  });
   let htmlProgram = null;
   let videoProgram = null;
   if (PROGRAM === 'html') {
@@ -76,7 +85,10 @@ async function main() {
     } else if (htmlProgram) {
       runHtmlProgram(socket, htmlProgram, { device, registry });
     } else if (PROGRAM === 'canvas') {
-      const canvasProgram = new LiveCanvasProgram(appLibrary, { log: appLog });
+      const canvasProgram = new LiveCanvasProgram(appLibrary, {
+        log: appLog,
+        dataProvider: (app) => (app.id === 'crypto-tracker' ? binancePosition.getSnapshot() : null),
+      });
       device.programController = canvasProgram;
       runCanvasProgram(socket, canvasProgram, {
         device,

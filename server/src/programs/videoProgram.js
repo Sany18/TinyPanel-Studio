@@ -36,16 +36,19 @@ class VideoProgram {
     this.fps = Math.max(1, Math.min(30, Number(fps) || 20));
     this.ffmpeg = ffmpeg;
     this.process = null;
+    this.timer = null;
+    this.generatedFrame = 0;
     this.frames = [];
     this.waiters = [];
     this.lastError = null;
   }
 
   start() {
-    if (this.process) return;
+    if (this.process || this.timer) return;
+    if (!this.source && this._startGeneratedClock()) return;
     const input = this.source
       ? ['-re', '-i', this.source]
-      : ['-f', 'lavfi', '-i', `testsrc2=size=160x128:rate=${this.fps}`];
+      : ['-f', 'lavfi', '-i', `smptebars=size=160x128:rate=${this.fps}`];
     const args = [
       '-hide_banner', '-loglevel', 'error', ...input,
       '-vf', 'scale=160:128:force_original_aspect_ratio=decrease,pad=160:128:(ow-iw)/2:(oh-ih)/2:black',
@@ -67,6 +70,43 @@ class VideoProgram {
     });
   }
 
+  _startGeneratedClock() {
+    let createCanvas;
+    try {
+      ({ createCanvas } = require('canvas'));
+    } catch {
+      return false;
+    }
+    const canvas = createCanvas(160, 128);
+    const context = canvas.getContext('2d');
+    const colors = ['#ffffff', '#ffff00', '#00ffff', '#00ff00', '#ff00ff', '#ff0000', '#0000ff'];
+    const render = () => {
+      context.fillStyle = '#05070c';
+      context.fillRect(0, 0, 160, 128);
+      const barWidth = Math.ceil(160 / colors.length);
+      colors.forEach((color, index) => {
+        context.fillStyle = color;
+        context.fillRect(index * barWidth, 22, barWidth, 72);
+      });
+      context.fillStyle = '#111827';
+      context.fillRect(0, 94, 160, 34);
+      context.fillStyle = '#25324a';
+      context.fillRect(this.generatedFrame % 160, 94, 2, 34);
+      context.fillStyle = '#05070c';
+      context.fillRect(0, 0, 160, 22);
+      context.fillStyle = '#ffffff';
+      context.font = 'bold 16px monospace';
+      context.textBaseline = 'top';
+      const time = new Date().toLocaleTimeString('uk-UA', { hour12: false });
+      context.fillText(time, 39, 2);
+      this.generatedFrame++;
+      this._publish(canvas.toBuffer('image/jpeg', { quality: 0.72, chromaSubsampling: false }));
+    };
+    render();
+    this.timer = setInterval(render, 1000 / this.fps);
+    return true;
+  }
+
   _publish(frame) {
     const waiter = this.waiters.shift();
     if (waiter) waiter.resolve(frame);
@@ -81,14 +121,16 @@ class VideoProgram {
   }
 
   async nextFrame() {
-    if (!this.process) this.start();
+    if (!this.process && !this.timer) this.start();
     const jpeg = this.frames.shift() || await new Promise((resolve, reject) => this.waiters.push({ resolve, reject }));
     return new FrameBuilder().jpegFrame(jpeg);
   }
 
   stop() {
     if (this.process) this.process.kill('SIGTERM');
+    if (this.timer) clearInterval(this.timer);
     this.process = null;
+    this.timer = null;
   }
 }
 

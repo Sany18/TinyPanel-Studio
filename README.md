@@ -49,13 +49,13 @@ Selecting an app in the left sidebar switches the program rendered on connected
 displays. The legacy Synthwave demo remains available with
 `npm run start:synthwave`.
 
-Run the generated video test stream (requires `ffmpeg`) with:
+Run the generated video test stream with a server-local clock with:
 
 ```bash
 npm run start:video
 ```
 
-Set `DISPLAY_VIDEO_SOURCE` to a local video file, camera input understood by
+Set `DISPLAY_VIDEO_SOURCE` to a local video file or camera input understood by
 ffmpeg, or a network stream URL to replace the generated test pattern.
 
 For the ESP32, copy `firmware/display-client/secrets.h.example` to

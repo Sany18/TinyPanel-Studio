@@ -3,7 +3,9 @@ node_modules/
 server/debug/editor.bundle.js
 apps/.active-app
 firmware/display-client/secrets.h
+apps/crypto-tracker/secrets.h
 firmware/display-client/.pio/
 firmware/display-client/firmware-builds/
 __pycache__/
 *.pyc
+**/secrets.h
