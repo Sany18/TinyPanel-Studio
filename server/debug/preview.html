@@ -19,6 +19,13 @@
     background-image: linear-gradient(to right, #ffffff18 1px, transparent 1px),
       linear-gradient(to bottom, #ffffff18 1px, transparent 1px);
     background-size: 10% 100%, 100% 12.5%; }
+  .canvas-wrap.grid-hidden::after { display: none; }
+  #grid-toggle { position: fixed; z-index: 2; left: 10px; bottom: 8px; width: 22px; height: 22px;
+    padding: 0; border: 1px solid #596579; border-radius: 0; background: #0b0d12cc;
+    color: #d8dee9; font: 15px/20px ui-monospace, SFMono-Regular, Menlo, monospace;
+    cursor: pointer; }
+  #grid-toggle[aria-pressed="false"] { color: #657084; background: #0b0d12aa; }
+  #grid-toggle:hover { border-color: #6ec8ff; color: #6ec8ff; }
   .ruler-x, .ruler-y { position: relative; color: #8b96a8; font-size: 10px; user-select: none; }
   .ruler-x { grid-column: 2; grid-row: 2; border-top: 1px solid #465064; }
   .ruler-y { grid-column: 1; grid-row: 1; border-right: 1px solid #465064; }
@@ -42,10 +49,11 @@
 <body>
   <div class="display-ruler">
     <div id="ruler-y" class="ruler-y"></div>
-    <div class="canvas-wrap"><canvas id="panel" width="160" height="128"></canvas></div>
+    <div id="canvas-wrap" class="canvas-wrap"><canvas id="panel" width="160" height="128"></canvas></div>
     <div class="ruler-corner">Y/X</div>
     <div id="ruler-x" class="ruler-x"></div>
   </div>
+  <button id="grid-toggle" type="button" aria-pressed="true" aria-label="Toggle preview grid" title="Toggle preview grid">▦</button>
   <div id="status">waiting for a device…</div>
   <script src="preview-client.js"></script>
 </body>

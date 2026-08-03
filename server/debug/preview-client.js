@@ -3,10 +3,24 @@
 const canvas = document.getElementById('panel');
 const ctx = canvas.getContext('2d');
 const status = document.getElementById('status');
+const canvasWrap = document.getElementById('canvas-wrap');
+const gridToggle = document.getElementById('grid-toggle');
 const requestedDevice = new URLSearchParams(location.search).get('device');
 let selectedDevice = requestedDevice;
 let eventSource = null;
 let frameCount = 0;
+
+function setGridVisible(visible) {
+  canvasWrap.classList.toggle('grid-hidden', !visible);
+  gridToggle.setAttribute('aria-pressed', String(visible));
+  gridToggle.title = visible ? 'Hide preview grid' : 'Show preview grid';
+  localStorage.setItem('tinypanel-preview-grid', visible ? 'on' : 'off');
+}
+
+setGridVisible(localStorage.getItem('tinypanel-preview-grid') !== 'off');
+gridToggle.addEventListener('click', () => {
+  setGridVisible(gridToggle.getAttribute('aria-pressed') !== 'true');
+});
 
 function addLabels(element, maximum, step, axis) {
   for (let value = 0; value <= maximum; value += step) {

@@ -282,7 +282,9 @@ function startDebugServer(port, registry, services = {}) {
   });
 
   server.listen(port, () => {
-    console.log(`debug viewer listening on :${port} - open http://localhost:${port} in a browser`);
+    console.log(`debug viewer listening on :${port}`);
+    console.log(`Device Studio: http://localhost:${port}`);
+    console.log(`IDE preview:   http://localhost:${port}/preview`);
   });
 
   return server;

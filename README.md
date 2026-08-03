@@ -14,9 +14,9 @@ changes appear on the panel without reflashing it.
 
 ![TinyPanel Studio workspace with live ESP32 preview, Canvas editor, app library, and firmware tools](./docs/tinypanel-studio-workspace.jpg)
 
-### Fullscreen editor and preview
+### IDE preview
 
-![TinyPanel Studio fullscreen workspace with Synthwave preview and firmware log](./docs/tinypanel-studio-fullscreen.jpg)
+![TinyPanel Synthwave preview opened in a VS Code browser panel](./docs/tinypanel-studio-fullscreen.jpg)
 
 ## Current features
 
@@ -42,7 +42,9 @@ npm ci
 npm start
 ```
 
-Open `http://localhost:8766`. The device stream listens on TCP port `8765`.
+Open `http://localhost:8766`. For an IDE panel that only shows the live display
+preview and coordinate grid, open `http://localhost:8766/preview`. The device
+stream listens on TCP port `8765`.
 Selecting an app in the left sidebar switches the program rendered on connected
 displays. The legacy Synthwave demo remains available with
 `npm run start:synthwave`.

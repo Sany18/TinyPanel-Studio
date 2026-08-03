@@ -24,8 +24,9 @@ npm start
 Listens on port `8765` by default (override with `DISPLAY_SERVER_PORT`).
 Flash the ESP32 firmware first with `DISPLAY_SERVER_HOST`/`PORT` pointed at
 this machine's LAN IP - the ESP32 connects out to this server, not the other
-way around. Also starts a browser debug viewer at `http://localhost:8766` by
-default - see "Debug viewer" below.
+way around. Also starts Device Studio at `http://localhost:8766` and a compact
+IDE-friendly display view at `http://localhost:8766/preview` by default - see
+"Debug viewer" below.
 
 Runs the selected Canvas application by default, so switching apps in Device
 Studio immediately changes what connected displays render. Run the legacy
@@ -84,6 +85,9 @@ a new one, edit its Canvas source, and see autosaved changes immediately on the
 connected ESP32. The active application is switched without restarting the
 server or reconnecting the display. `.active-app` is local runtime state and is
 not committed.
+
+Open `http://localhost:8766/preview` in an IDE browser panel when you only need
+the live display preview and coordinate grid without the editor and setup UI.
 
 The built-in editor uses locally bundled CodeMirror 6 with JavaScript syntax
 highlighting, line numbers, code folding, bracket matching, search,
